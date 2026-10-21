@@ -12,13 +12,16 @@ the measuring.
 
 ## Setup
 
-The server needs Node 20+ and, for mixing, ffmpeg.
+The hosted server is available at `https://bckgrnd-msc-mcp.vercel.app/mcp`.
+The local server needs Node 20+ and, for mixing/previews, ffmpeg. The registry
+package awaits publication; until then use a clone as documented in the
+repository's Getting Started page. The package command below applies after publication.
 
 ```sh
-claude mcp add bckgrnd-msc -- npx -y bckgrnd-msc-mcp
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp
 ```
 
-Other clients: run `npx -y bckgrnd-msc-mcp` as a stdio server.
+Other clients: run `pnpm dlx bckgrnd-msc-mcp` as a stdio server.
 
 If a tool says ffmpeg is missing, give the user the install line for their
 system and stop. Don't switch tools.
@@ -100,6 +103,14 @@ Leave `duck: true` (the default). It turns the music down further while the
 voice talks and lets it come back between paragraphs. Turn it off only when
 the user wants a steady bed.
 
+## Preview before a full mix
+
+When the listener wants to compare tracks and the local server offers
+`bckgrnd_preview_tracks`, pass the narration path, two candidate track ids,
+`seconds: 20`, and the same level/stem settings. Present the two output files
+and let the listener choose. Do not render an entire narration just to compare.
+The hosted server currently has no comparison tool.
+
 ## Step 3: mix
 
 ```json
@@ -116,7 +127,7 @@ give `output_path`. Paths must be absolute. Existing files are never replaced
 unless you pass `overwrite: true`.
 
 Report back in a short table: track, why it fits, `music_db`, the measured
-`voice_lufs`, and the output path.
+`voice_lufs`, final `output_lufs`/`output_true_peak_dbfs`, and the output path.
 
 ## Step 4: adjust by ear
 

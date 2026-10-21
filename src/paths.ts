@@ -6,9 +6,24 @@
  * so relative paths are refused rather than guessed at.
  */
 
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, renameSync, linkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { extname, isAbsolute, join } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join } from 'node:path';
+import type { JobOptions } from './jobs.js';
+
+/** Build beside the destination, then publish atomically without a check/write race. */
+export async function atomicOutput<T>(path: string, overwrite: boolean, work: (temporary: string) => Promise<T>, job: JobOptions = {}): Promise<T> {
+  job.signal?.throwIfAborted();
+  const dir = mkdtempSync(join(dirname(path), '.bckgrnd-'));
+  try {
+    const temporary = join(dir, basename(path));
+    const result = await work(temporary);
+    job.signal?.throwIfAborted();
+    if (overwrite) renameSync(temporary, path);
+    else linkSync(temporary, path);
+    return result;
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+}
 
 /** `BCKGRND_MSC_OUT_DIR`, or a folder in the system temp directory. */
 export function defaultOutDir(): string {

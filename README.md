@@ -15,10 +15,16 @@ machine when you ask for it.
 Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
+The hosted MCP is available now (clips up to two minutes):
+
 ```sh
-claude mcp add bckgrnd-msc -- npx -y bckgrnd-msc-mcp   # the server
-npx skills add chrislanejones/bckgrnd-msc-mcp          # the skill
+claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
+pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill bckgrnd-music
 ```
+
+For full-length files, use the [local checkout instructions](docs/Getting-Started.md#from-a-clone).
+The registry package is prepared and tested but awaits publication; package-based
+installation is not available yet. The current skills installer requires Node 22.20+.
 
 Then ask for it in plain words: "put Rain under `~/notes/article.mp3`."
 
@@ -31,7 +37,7 @@ says "I can't hear the words." Other clients, settings and running from a clone 
 
 - **[Vercel hosting](docs/Vercel.md)**: remote MCP endpoint, audio uploads and hosted clip limits.
 - **[Getting Started](docs/Getting-Started.md)**: install it in Claude Code, Claude Desktop or any client, add the skill, the settings.
-- **[Tools](docs/Tools.md)**: the three tools, every argument, what comes back, and what the errors mean.
+- **[Tools](docs/Tools.md)**: the local and hosted tools, every argument, what comes back, and what the errors mean.
 - **[Levels](docs/Levels.md)**: how the music level is set by measured loudness, the ducking, and which numbers to pick for which content.
 - **[Tracks](docs/Tracks.md)**: the eighteen tracks and eight stems, their moods and energy, and matching music to content.
 - **[Architecture](docs/Architecture.md)**: one engine in two places, streaming to disk, and the ffmpeg mix step by step.
@@ -54,6 +60,7 @@ decided, what was turned down, and what would make it the wrong call later.
 |---|---|
 | `bckgrnd_list_tracks` | The eighteen tracks, with bpm, mood, energy (1 to 5) and what each one suits |
 | `bckgrnd_render_track` | One track to a 48 kHz stereo WAV of any length, up to an hour. Cut any stems, set the fades |
+| `bckgrnd_preview_tracks` | Compare up to three tracks under the same short narration excerpt (local server) |
 | `bckgrnd_mix_under_voice` | A voice file plus a track, or your own music file, to one MP3 or WAV |
 
 Rendering runs about **20x faster** than real time. Seven minutes of music takes
@@ -71,6 +78,13 @@ about eighteen seconds.
 ## Changelog
 
 Latest release below. Full dated history → **[docs/Change-summary.md](docs/Change-summary.md)**.
+
+### v0.2.0: 10-21-2026 — package publication pending
+
+Vercel HTTP hosting, atomic file writes, unique render filenames, cancellation
+and progress, measured export loudness/true peak, narration previews, and CI
+with isolated package-install checks. The hosted service has three tools; the
+local server adds `bckgrnd_preview_tracks`.
 
 ### v0.1.0: 10-21-2026
 

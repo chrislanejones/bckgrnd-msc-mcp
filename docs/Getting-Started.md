@@ -5,7 +5,7 @@
 | Need | Why | Install |
 |---|---|---|
 | Node 20 or newer | Runs the server | [nodejs.org](https://nodejs.org/) |
-| ffmpeg and ffprobe | Only for `bckgrnd_mix_under_voice`. Rendering a track on its own doesn't need them | See below |
+| ffmpeg and ffprobe | For mixing and previews. Rendering a track on its own doesn't need them | See below |
 
 | System | ffmpeg |
 |---|---|
@@ -13,14 +13,26 @@
 | Debian / Ubuntu | `sudo apt install ffmpeg` |
 | Windows | `winget install Gyan.FFmpeg` |
 
-## Add it to your client
+## Hosted server (available now)
 
-It's a stdio server. Every client starts it the same way: `npx -y bckgrnd-msc-mcp`.
+```sh
+claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
+```
+
+See [Vercel hosting](Vercel.md) for the two-minute clip limit and audio upload/output
+requirements. No local ffmpeg install is needed for hosted calls.
+
+## Add the local server to your client
+
+The registry package is not published yet. Use **From a clone** below until it is.
+The following package commands are for after publication.
+
+It's a stdio server. Every client starts it the same way: `pnpm dlx bckgrnd-msc-mcp`.
 
 ### Claude Code
 
 ```sh
-claude mcp add bckgrnd-msc -- npx -y bckgrnd-msc-mcp
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp
 ```
 
 ### Claude Desktop, Cursor and other JSON configs
@@ -29,8 +41,8 @@ claude mcp add bckgrnd-msc -- npx -y bckgrnd-msc-mcp
 {
   "mcpServers": {
     "bckgrnd-msc": {
-      "command": "npx",
-      "args": ["-y", "bckgrnd-msc-mcp"]
+      "command": "pnpm",
+      "args": ["dlx", "bckgrnd-msc-mcp"]
     }
   }
 }
@@ -48,12 +60,14 @@ claude mcp add bckgrnd-msc -- node "$PWD/dist/index.js"
 
 ## Add the skill
 
+The current skills CLI requires Node 22.20 or newer.
+
 The server gives an agent the tools. The skill tells it how to use them well: which
 track suits which content, where to set the level, and what to change when the
 listener complains.
 
 ```sh
-npx skills add chrislanejones/bckgrnd-msc-mcp
+pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp
 ```
 
 ## Settings
@@ -69,7 +83,7 @@ Everything is optional.
 Pass them through your client's `env` block, or put them before the command:
 
 ```sh
-claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- npx -y bckgrnd-msc-mcp
+claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- pnpm dlx bckgrnd-msc-mcp
 ```
 
 ## Check it works

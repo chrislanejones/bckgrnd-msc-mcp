@@ -1,6 +1,8 @@
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { toolJob } from './jobs.js';
 import { tmpdir } from 'node:os';
-import { basename, dirname, extname, join } from 'node:path';
+import { basename, dirname, extname, join, isAbsolute } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
@@ -110,25 +112,28 @@ Use bckgrnd_mix_under_voice instead when the music is going under a narration; i
         peak_dbfs: z.number(),
         render_ms: z.number(),
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
-    async (args) => {
+    async (args, extra) => {
+      const job = toolJob(extra);
       const track = findTrack(args.track);
       if (!track) return fail(unknownTrackMessage(args.track));
       const cutTag = args.cut?.length ? `-no-${[...new Set(args.cut)].join('-')}` : '';
-      const outputPath = args.output_path ?? join(defaultOutDir(), `${track.id}-${Math.round(args.seconds)}s${cutTag}.wav`);
-      const problem = outputProblem(outputPath, ['.wav'], args.overwrite || !args.output_path);
+      const outputPath = args.output_path ?? join(defaultOutDir(), `${track.id}-${Math.round(args.seconds)}s${cutTag}-${randomUUID()}.wav`);
+      const problem = outputProblem(outputPath, ['.wav'], args.overwrite);
       if (problem) return fail(problem);
       try {
         const result = await renderTrack({
+          ...job,
           track,
           seconds: args.seconds,
           outputPath,
           cut: args.cut,
           fadeInSeconds: args.fade_in_seconds,
           fadeOutSeconds: args.fade_out_seconds,
-          overwrite: args.overwrite || !args.output_path,
+          overwrite: args.overwrite,
         });
+        await job.onProgress?.(100, 'Render complete');
         const cutNote = result.cut.length ? `, cut: ${result.cut.join(', ')}` : '';
         return ok(
           `Rendered ${result.track} (${result.bpm} bpm${cutNote}), ${result.seconds.toFixed(1)} s, peak ${result.peak_dbfs} dBFS, in ${result.render_ms} ms.\n${result.path}`,
@@ -162,7 +167,7 @@ Args:
   - output_path (string, optional): absolute path ending in .mp3 or .wav. Default: next to the voice file, named <voice>.with-<track>.mp3
   - overwrite (boolean, default false)
 
-Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, voice_lufs, music_lufs, voice_gain_db, music_gain_db, duck }`,
+Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, voice_lufs, music_lufs, voice_gain_db, music_gain_db, duck, output_lufs, output_true_peak_dbfs }`,
       inputSchema: {
         voice_path: z.string().min(1).describe('Absolute path to the narration audio'),
         track: z.string().optional().describe('bckgrnd-msc track id or name, e.g. "rain"'),
@@ -178,6 +183,8 @@ Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, v
       },
       outputSchema: {
         path: z.string(),
+        output_lufs: z.number(),
+        output_true_peak_dbfs: z.number(),
         voice_seconds: z.number(),
         total_seconds: z.number(),
         music: z.string(),
@@ -189,12 +196,14 @@ Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, v
         music_gain_db: z.number(),
         duck: z.boolean(),
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
-    async (args) => {
+    async (args, extra) => {
+      const job = toolJob(extra);
       if (Boolean(args.track) === Boolean(args.music_path)) {
         return fail('Give exactly one of track or music_path.');
       }
+      if (!isAbsolute(args.voice_path) || (args.music_path && !isAbsolute(args.music_path))) return fail('Input paths must be absolute.');
       if (!existsSync(args.voice_path)) return fail(`voice_path not found: ${args.voice_path}`);
       if (args.music_path && !existsSync(args.music_path)) return fail(`music_path not found: ${args.music_path}`);
       const track = args.track ? findTrack(args.track) : undefined;
@@ -209,7 +218,7 @@ Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, v
 
       let scratch: string | null = null;
       try {
-        const voiceSeconds = await durationSeconds(args.voice_path);
+        const voiceSeconds = await durationSeconds(args.voice_path, job);
         const totalSeconds = args.lead_in_seconds + voiceSeconds + args.tail_seconds;
         if (totalSeconds > MAX_SECONDS) {
           return fail(`The voice is ${Math.round(voiceSeconds)} s; the limit with lead-in and tail is ${MAX_SECONDS} s.`);
@@ -220,14 +229,17 @@ Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, v
           scratch = mkdtempSync(join(tmpdir(), 'bckgrnd-mix-'));
           musicPath = join(scratch, `${track.id}.wav`);
           // The fade-out is ffmpeg's job here, timed against the voice.
-          await renderTrack({ track, seconds: totalSeconds, outputPath: musicPath, cut: args.cut, fadeInSeconds: 1, fadeOutSeconds: 0 });
+          await renderTrack({ ...job, onProgress: async (p, message) => job.onProgress?.(p * 0.6, message), track, seconds: totalSeconds, outputPath: musicPath, cut: args.cut, fadeInSeconds: 1, fadeOutSeconds: 0 });
         }
 
-        const [voiceLufs, musicLufs] = await Promise.all([loudnessLufs(args.voice_path), loudnessLufs(musicPath)]);
+        await job.onProgress?.(65, 'Measuring voice and music');
+        const [voiceLufs, musicLufs] = await Promise.all([loudnessLufs(args.voice_path, job), loudnessLufs(musicPath, job)]);
         if (voiceLufs <= SILENCE_LUFS) return fail(`${args.voice_path} is silent, so there's no level to match the music to.`);
         const levels = levelsFor(voiceLufs, musicLufs, args.loudness_lufs, args.music_db);
 
-        await mixUnderVoice({
+        await job.onProgress?.(80, 'Mixing narration and music');
+        const measured = await mixUnderVoice({
+          ...job,
           voicePath: args.voice_path,
           musicPath,
           outputPath,
@@ -239,7 +251,9 @@ Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, v
           overwrite: args.overwrite,
         });
 
+        await job.onProgress?.(100, 'Mix complete');
         const result = {
+          ...measured,
           path: outputPath,
           voice_seconds: Math.round(voiceSeconds * 10) / 10,
           total_seconds: Math.round(totalSeconds * 10) / 10,

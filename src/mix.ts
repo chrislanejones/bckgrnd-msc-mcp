@@ -16,6 +16,9 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { resolve } from 'node:path';
+import { atomicOutput } from './paths.js';
+import type { JobOptions } from './jobs.js';
 
 const run = promisify(execFile);
 
@@ -31,9 +34,9 @@ export const SILENCE_LUFS = -70;
 
 export class MissingFfmpegError extends Error {}
 
-async function tool(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+async function tool(cmd: string, args: string[], job: JobOptions = {}): Promise<{ stdout: string; stderr: string }> {
   try {
-    return await run(cmd, args, { maxBuffer: 64 * 1024 * 1024 });
+    return await run(cmd, args, { maxBuffer: 4 * 1024 * 1024, timeout: 120_000, signal: job.signal, killSignal: 'SIGKILL' });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       throw new MissingFfmpegError(`"${cmd}" isn't installed or isn't on PATH. ${INSTALL_HINT}`, { cause: error });
@@ -45,8 +48,8 @@ async function tool(cmd: string, args: string[]): Promise<{ stdout: string; stde
 }
 
 /** Length of any file ffmpeg can read, in seconds. */
-export async function durationSeconds(path: string): Promise<number> {
-  const { stdout } = await tool(ffprobe(), ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path]);
+export async function durationSeconds(path: string, job: JobOptions = {}): Promise<number> {
+  const { stdout } = await tool(ffprobe(), ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path], job);
   const seconds = Number.parseFloat(stdout.trim());
   if (!Number.isFinite(seconds) || seconds <= 0) {
     throw new Error(`Couldn't read a duration from ${path}. Is it an audio file?`);
@@ -55,8 +58,8 @@ export async function durationSeconds(path: string): Promise<number> {
 }
 
 /** Integrated loudness of a file, in LUFS. */
-export async function loudnessLufs(path: string): Promise<number> {
-  const { stderr } = await tool(ffmpeg(), ['-hide_banner', '-nostats', '-nostdin', '-i', path, '-af', 'ebur128=framelog=quiet', '-f', 'null', '-']);
+export async function loudnessLufs(path: string, job: JobOptions = {}): Promise<number> {
+  const { stderr } = await tool(ffmpeg(), ['-hide_banner', '-nostats', '-nostdin', '-i', path, '-af', 'ebur128=framelog=quiet', '-f', 'null', '-'], job);
   const lufs = parseIntegratedLoudness(stderr);
   if (lufs === null) throw new Error(`Couldn't measure the loudness of ${path}.`);
   return lufs;
@@ -87,7 +90,7 @@ export function levelsFor(voiceLufs: number, musicLufs: number, targetLufs: numb
   return { voiceGainDb: round(voiceGainDb), musicGainDb: round(musicGainDb) };
 }
 
-export interface MixOptions extends Levels {
+export interface MixOptions extends Levels, JobOptions {
   voicePath: string;
   musicPath: string;
   outputPath: string;
@@ -110,7 +113,7 @@ export function mixGraph(o: GraphOptions): string {
   const voice = `[0:a]${fmt},volume=${o.voiceGainDb}dB,adelay=delays=${leadMs}:all=1,apad[v]`;
   const bed = `[1:a]${fmt},volume=${o.musicGainDb}dB,afade=t=out:st=${fadeStart}:d=${fadeDur}[m]`;
   // The limiter only catches the odd peak the gain pushed over; levels come from the gains.
-  const out = `amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.95[out]`;
+  const out = `amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.95:level=0[out]`;
   if (!o.duck) return [voice, bed, `[v][m]${out}`].join(';');
   return [
     voice,
@@ -122,7 +125,16 @@ export function mixGraph(o: GraphOptions): string {
   ].join(';');
 }
 
-export async function mixUnderVoice(o: MixOptions): Promise<void> {
+export async function mixUnderVoice(o: MixOptions): Promise<AudioMeasurements> {
+  if ([o.voicePath, o.musicPath].some((p) => resolve(p) === resolve(o.outputPath))) throw new Error('Output must differ from input files.');
+  return atomicOutput(o.outputPath, o.overwrite, async (temporary) => {
+    await mixToFile({ ...o, outputPath: temporary });
+    await o.onProgress?.(90, 'Measuring finished audio');
+    return measureAudio(temporary, o);
+  }, o);
+}
+
+async function mixToFile(o: MixOptions): Promise<void> {
   const codec = o.outputPath.toLowerCase().endsWith('.wav') ? ['-c:a', 'pcm_s16le'] : ['-c:a', 'libmp3lame', '-q:a', '2'];
   await tool(ffmpeg(), [
     '-hide_banner',
@@ -138,5 +150,24 @@ export async function mixUnderVoice(o: MixOptions): Promise<void> {
     '-ar', '48000',
     ...codec,
     o.outputPath,
-  ]);
+  ], o);
+}
+
+export interface AudioMeasurements {
+  output_lufs: number;
+  output_true_peak_dbfs: number;
+}
+
+/** Measure the actual encoded export, including ducking, fades and limiting. */
+export async function measureAudio(path: string, job: JobOptions = {}): Promise<AudioMeasurements> {
+  const { stderr } = await tool(ffmpeg(), ['-hide_banner', '-nostats', '-nostdin', '-i', path, '-af', 'ebur128=peak=true:framelog=quiet', '-f', 'null', '-'], job);
+  const loudness = parseIntegratedLoudness(stderr);
+  const peak = [...stderr.matchAll(/Peak:\s+(-?(?:\d+(?:\.\d+)?|inf))\s+dBFS/g)].at(-1);
+  if (loudness === null || !peak) throw new Error('Could not measure the finished audio.');
+  const value = Number(peak[1]);
+  return { output_lufs: loudness, output_true_peak_dbfs: Number.isFinite(value) ? value : -120 };
+}
+
+export async function extractPreview(input: string, output: string, start: number, seconds: number, job: JobOptions = {}): Promise<void> {
+  await tool(ffmpeg(), ['-v', 'error', '-nostdin', '-ss', String(start), '-i', input, '-t', String(seconds), '-map', '0:a:0', '-c:a', 'pcm_s16le', '-ar', '48000', output], job);
 }

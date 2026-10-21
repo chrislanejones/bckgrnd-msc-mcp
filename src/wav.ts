@@ -37,7 +37,8 @@ export class WavWriter {
   /** `exclusive` fails with EEXIST instead of replacing a file that is already there. */
   constructor(path: string, frames: number, sampleRate: number, exclusive: boolean) {
     this.fd = openSync(path, exclusive ? 'wx' : 'w');
-    writeSync(this.fd, wavHeader(frames, sampleRate));
+    try { writeSync(this.fd, wavHeader(frames, sampleRate)); }
+    catch (error) { closeSync(this.fd); throw error; }
   }
 
   /** Interleave, clip to [-1, 1] and append `count` frames. */

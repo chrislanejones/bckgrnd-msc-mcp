@@ -1,5 +1,15 @@
 # Change Summary
 
+## v0.2.0: 10-21-2026 — package publication pending
+
+- Hosted Streamable HTTP MCP on Vercel, with bounded audio uploads and embedded MP3 results.
+- Unique render paths and atomic outputs preserve existing files on failure/cancellation.
+- Local MCP progress and cancellation; ffmpeg subprocess timeouts.
+- Finished-file LUFS and true-peak measurements; limiter makeup gain disabled.
+- Compare up to three tracks under a short narration excerpt using the local preview tool.
+- CI on Node 22/24 and an isolated install/stdio smoke test of the actual package archive.
+- Registry publication still requires authentication; hosted deployment is separate.
+
 ## v0.1.0: 10-21-2026
 
 **First release. Music under a voice, with levels set by measured loudness.**

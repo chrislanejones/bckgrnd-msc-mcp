@@ -4,6 +4,11 @@
 |---|---|
 | `src/index.ts` | Entry point. Starts the server on stdio |
 | `src/server.ts` | Builds the `McpServer` and registers the tools. Tests use this directly |
+| `src/preview.ts` | Narration excerpts and track comparisons |
+| `src/jobs.ts` | Cancellation and MCP progress |
+| `src/remote.ts` | Hosted upload/audio adapter |
+| `api/mcp.ts` | Stateless HTTP endpoint |
+| `scripts/test-package.mjs` | Isolated package installation and stdio verification |
 | `src/tools.ts` | The three tools: schemas, descriptions, handlers |
 | `src/library.ts` | Reads the track library, finds tracks by id or name, the stem order |
 | `src/moods.ts` | Mood, energy and "good for" per style |
@@ -15,7 +20,7 @@
 | `vendor/library/` | The tracks, copied from bckgrnd-msc's `public/library/` |
 | `vendor/SOURCE.json` | Which bckgrnd-msc commit `vendor/` came from |
 | `scripts/sync-engine.mjs` | Refreshes `vendor/` from a bckgrnd-msc checkout |
-| `skills/bckgrnd-music/SKILL.md` | The skill listed on skills.sh |
+| `skills/bckgrnd-music/SKILL.md` | The companion skill discoverable by the skills CLI |
 | `test/tools.test.ts` | The tests. They run the real server in memory |
 | `docs/` | These pages |
 | `docs/adr/` | Design decisions |

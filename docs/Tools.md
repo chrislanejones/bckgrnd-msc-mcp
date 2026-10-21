@@ -1,6 +1,6 @@
 # Tools
 
-Three tools. All paths are absolute. The server is started from a folder nobody
+Four local tools. The hosted server exposes the first three with upload/audio schemas; see [Vercel hosting](Vercel.md). All paths are absolute. The server is started from a folder nobody
 picked, so a relative path would land somewhere surprising, and it refuses them
 instead. No tool replaces an existing file unless you pass `overwrite: true`.
 
@@ -32,9 +32,10 @@ up, then fades out.
 
 Returns `{ path, track, bpm, seconds, sample_rate, cut, peak_dbfs, render_ms }`.
 
-Without an `output_path` the file is named `<track>-<seconds>s.wav`, plus
-`-no-<stems>` when stems are cut, in `BCKGRND_MSC_OUT_DIR`. Those names are the
-server's own, so re-rendering the same thing replaces them.
+Without an `output_path`, a unique UUID is appended to the filename in
+`BCKGRND_MSC_OUT_DIR`. Repeated and concurrent renders preserve earlier files.
+All exports are written to a temporary sibling and published atomically only
+after success. Cancellation or encoding errors preserve an existing output.
 
 ## `bckgrnd_mix_under_voice`
 
@@ -57,11 +58,29 @@ Give exactly one of `track` or `music_path`.
 | `output_path` | string | next to the voice | Must end in `.mp3` or `.wav` |
 | `overwrite` | boolean | `false` | Replace `output_path` if it exists |
 
-Returns `{ path, voice_seconds, total_seconds, music, music_db, loudness_lufs, voice_lufs, music_lufs, voice_gain_db, music_gain_db, duck }`.
+Returns `{ path, voice_seconds, total_seconds, music, music_db, loudness_lufs, voice_lufs, music_lufs, voice_gain_db, music_gain_db, duck, output_lufs, output_true_peak_dbfs }`.
 
 The default output is `<voice name>.with-<track>.mp3` in the voice file's folder.
 `voice_lufs` and `music_lufs` are what was measured before anything was turned up
 or down. [Levels](Levels.md) covers what the numbers mean.
+
+## `bckgrnd_preview_tracks` (local)
+
+Compare one to three tracks under the same excerpt. Arguments: absolute
+`voice_path`, `tracks` (1–3 ids), `seconds` (15–30, default 20),
+`start_seconds` (default 0), optional `cut`, `music_db` (default -14), and
+`loudness_lufs` (default -16). If less narration remains, the excerpt is shorter.
+Each preview has no lead-in and a one-second tail. Returns `{ previews,
+start_seconds }`; each preview contains the mix metadata, path and measurements.
+Files land in a unique `previews-*` folder under `BCKGRND_MSC_OUT_DIR`.
+
+## Progress and cancellation
+
+Local calls support MCP progress notifications when the caller supplies a
+progress token, and MCP cancellation stops rendering and ffmpeg processes.
+Individual ffmpeg/ffprobe processes have a two-minute timeout. Hosted audio jobs
+have a 45-second processing deadline within the 60-second Vercel function limit;
+stateless HTTP cancellation across separate requests is not supported.
 
 ## Errors
 

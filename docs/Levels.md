@@ -69,3 +69,15 @@ with Night Drive under it: both mixes came out at **-15.6 LUFS**, peaks around
 | "The music keeps swelling and dropping" | `duck: false` |
 
 The ear wins. These are starting points.
+
+## Measure the export
+
+Mix results include `output_lufs` and `output_true_peak_dbfs`, measured from the
+finished encoded file. These are distinct from input `voice_lufs`/`music_lufs`
+and the requested voice target. Music, fades, limiting and MP3 encoding can
+change final loudness and peak level. The limiter's automatic makeup gain is
+disabled so it does not raise the measured gain settings.
+
+The speech-fixture regression checks that ducking reduces the music during
+speech and that it recovers during the silent tail. Measurements describe the
+output; this is not a guaranteed streaming-platform mastering target.

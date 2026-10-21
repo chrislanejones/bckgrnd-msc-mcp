@@ -1,6 +1,6 @@
 {
   "name": "bckgrnd-msc-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An MCP server that renders bckgrnd-msc tracks to WAV and lays them under a narration, turned down while the voice talks.",
   "type": "module",
   "license": "MIT",
@@ -43,7 +43,10 @@
     "sync-engine": "node scripts/sync-engine.mjs",
     "prepare": "tsc -p tsconfig.build.json",
     "build:vercel": "pnpm run build && node scripts/prepare-vercel.mjs",
-    "pretest": "node scripts/prepare-vercel.mjs"
+    "pretest": "node scripts/prepare-vercel.mjs",
+    "test:package": "node scripts/test-package.mjs",
+    "prepack": "pnpm run build",
+    "prepublishOnly": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run test:package"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
@@ -51,7 +54,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^20.19.43",
+    "@types/node": "^22.20.5",
     "eslint": "^10.13.0",
     "ffmpeg-static": "^5.3.0",
     "ffprobe-static": "^3.1.0",

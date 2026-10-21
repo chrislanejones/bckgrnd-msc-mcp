@@ -36,7 +36,7 @@ configure access intentionally in the Vercel dashboard.
 ## Connect
 
 ```sh
-claude mcp add --transport http bckgrnd-msc https://YOUR-PROJECT.vercel.app/mcp
+claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
 ```
 
 For other clients, select Streamable HTTP and use that same URL. The root URL

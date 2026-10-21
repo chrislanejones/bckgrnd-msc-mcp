@@ -6,3 +6,5 @@ dist/
 *.mp3
 !test/fixtures/*.wav
 vendor/runtime/
+.vercel
+.env*

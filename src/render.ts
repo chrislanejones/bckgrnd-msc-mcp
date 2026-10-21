@@ -7,11 +7,13 @@
  * asks for them; here a loop calls it as fast as it returns.
  */
 
-import { readFileSync, unlinkSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Engine, initSync } from '../vendor/engine/bckgrnd_msc_engine.js';
 import { arrangementJson, STEMS, type StemId, type TrackSummary } from './library.js';
 import { WavWriter } from './wav.js';
+import { atomicOutput } from './paths.js';
+import type { JobOptions } from './jobs.js';
 
 export const SAMPLE_RATE = 48_000;
 const BLOCK = 128;
@@ -27,7 +29,7 @@ function boot(): void {
   booted = true;
 }
 
-export interface RenderOptions {
+export interface RenderOptions extends JobOptions {
   track: TrackSummary;
   seconds: number;
   outputPath: string;
@@ -50,6 +52,15 @@ export interface RenderResult {
 }
 
 export async function renderTrack(opts: RenderOptions): Promise<RenderResult> {
+  return atomicOutput(opts.outputPath, opts.overwrite ?? false, async (temporary) => {
+    const result = await renderToFile({ ...opts, outputPath: temporary });
+    return { ...result, path: opts.outputPath };
+  }, opts);
+}
+
+async function renderToFile(opts: RenderOptions): Promise<RenderResult> {
+  opts.signal?.throwIfAborted();
+  await opts.onProgress?.(0, 'Rendering music');
   boot();
   const started = performance.now();
   const frames = Math.round(opts.seconds * SAMPLE_RATE);
@@ -58,10 +69,10 @@ export async function renderTrack(opts: RenderOptions): Promise<RenderResult> {
   const cut = [...new Set(opts.cut ?? [])];
 
   const engine = new Engine(SAMPLE_RATE);
-  const writer = new WavWriter(opts.outputPath, frames, SAMPLE_RATE, !opts.overwrite);
+  let writer: WavWriter | undefined;
   let peak = 0;
-  let finished = false;
   try {
+    writer = new WavWriter(opts.outputPath, frames, SAMPLE_RATE, true);
     if (!engine.load_track_wasm(arrangementJson(opts.track.id))) {
       throw new Error(`The engine rejected the arrangement for "${opts.track.id}". Re-run the engine sync.`);
     }
@@ -87,14 +98,14 @@ export async function renderTrack(opts: RenderOptions): Promise<RenderResult> {
       if (sinceYield >= YIELD_EVERY_FRAMES) {
         sinceYield = 0;
         await new Promise((resolve) => setImmediate(resolve));
+        opts.signal?.throwIfAborted();
+        await opts.onProgress?.(Math.min(99, Math.floor((done + count) / frames * 100)), 'Rendering music');
       }
     }
-    finished = true;
+    opts.signal?.throwIfAborted();
   } finally {
-    writer.close();
+    writer?.close();
     engine.free();
-    // A half-written WAV has a header that promises samples it doesn't have.
-    if (!finished) unlinkSync(opts.outputPath);
   }
 
   return {
