@@ -5,6 +5,29 @@ its own MCP server and temporary audio directory, so it does not require Redis,
 Blob storage or sticky sessions. Node runs the existing WASM music engine;
 ffmpeg and ffprobe are bundled at build time.
 
+## Ownership and audio processing
+
+Chris Lane Jones operates `https://bckgrnd-msc-mcp.vercel.app/mcp` for this
+[public project](https://github.com/chrislanejones/bckgrnd-msc-mcp).
+The GitHub repository is connected to Vercel for deployments from `main`.
+Review [the handler](../api/mcp.ts), [audio processing](../src/remote.ts), and
+[deployment configuration](../vercel.json). The endpoint is unversioned and may
+change independently of npm releases. Source availability does not prove which
+revision is running on the host.
+
+Hosted mixing uploads the selected narration bytes over HTTPS to Vercel.
+Node, the bundled WASM engine and ffmpeg process the audio in a temporary job
+directory. A `finally` block attempts to remove that directory on success or
+failure; abrupt termination may prevent cleanup. Results embed MP3 bytes in the
+response. The application has no persistent audio store or download URLs and
+logs only the error class on audio job failures, not narration bytes.
+
+These application behaviors do not establish a hosting-provider retention
+policy or cover infrastructure logs or your AI client's data handling. Choose
+local stdio processing when you do not want to upload audio to this operator
+and provider. Agents should not switch from local to hosted processing without
+the user's choice to upload the selected narration.
+
 ## Hosted limits
 
 - Render and mix output: at most 120 seconds, including lead-in and tail.

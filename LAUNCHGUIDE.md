@@ -22,7 +22,7 @@ The service is free, and the source is MIT licensed.
   including intro and tail, is limited to 120 seconds. Results embed MP3 audio.
 - Local setup requires Node.js 20+, pnpm, and ffmpeg for mixing and previews.
   Build from the public repository with `pnpm install` and `pnpm run build`,
-  then run `node dist/index.js`. Registry publication is pending.
+  then run `node dist/index.js`. The local package command is `pnpm dlx bckgrnd-msc-mcp@0.2.0`.
 - `BCKGRND_MSC_API_TOKEN` (optional, self-hosted deployments): require bearer
   authentication on your own deployment. Not required for the public endpoint.
 
@@ -38,6 +38,8 @@ Content & Media
 - Follow the companion background-music skill for track selection and mixing guidance.
 
 ## Getting Started
+- Default local setup: `claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0`
+- Hosted processing uploads narration to the project operator on Vercel; choose it explicitly after reviewing docs/Vercel.md.
 - Connect: `claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp`
 - Install the companion skill: `pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music`
 - "List some calm tracks for a narrated tutorial."

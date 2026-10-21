@@ -13,26 +13,16 @@
 | Debian / Ubuntu | `sudo apt install ffmpeg` |
 | Windows | `winget install Gyan.FFmpeg` |
 
-## Hosted server (available now)
-
-```sh
-claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
-```
-
-See [Vercel hosting](Vercel.md) for the two-minute clip limit and audio upload/output
-requirements. No local ffmpeg install is needed for hosted calls.
-
 ## Add the local server to your client
 
-The registry package is not published yet. Use **From a clone** below until it is.
-The following package commands are for after publication.
+Use the local server by default. The commands pin version 0.2.0.
 
-It's a stdio server. Every client starts it the same way: `pnpm dlx bckgrnd-msc-mcp`.
+It's a stdio server. Every client starts it the same way: `pnpm dlx bckgrnd-msc-mcp@0.2.0`.
 
 ### Claude Code
 
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0
 ```
 
 ### Claude Desktop, Cursor and other JSON configs
@@ -42,7 +32,7 @@ claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp
   "mcpServers": {
     "bckgrnd-msc": {
       "command": "pnpm",
-      "args": ["dlx", "bckgrnd-msc-mcp"]
+      "args": ["dlx", "bckgrnd-msc-mcp@0.2.0"]
     }
   }
 }
@@ -57,6 +47,20 @@ pnpm install
 pnpm run build
 claude mcp add bckgrnd-msc -- node "$PWD/dist/index.js"
 ```
+
+## Optional hosted server
+
+Choose this only if you want narration processed remotely by the project operator
+on Vercel. Read [ownership and audio processing](Vercel.md#ownership-and-audio-processing).
+The hosted endpoint is not pinned to the local package version.
+
+```sh
+claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
+```
+
+Hosted calls need no local ffmpeg but have the upload and duration limits in
+[Vercel hosting](Vercel.md). Do not configure both transports under the same
+client entry; replace the existing entry if changing transports.
 
 ## Add the skill
 
@@ -83,7 +87,7 @@ Everything is optional.
 Pass them through your client's `env` block, or put them before the command:
 
 ```sh
-claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- pnpm dlx bckgrnd-msc-mcp
+claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- pnpm dlx bckgrnd-msc-mcp@0.2.0
 ```
 
 ## Check it works

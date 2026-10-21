@@ -17,16 +17,24 @@ machine when you ask for it.
 Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
-The hosted MCP is available now (clips up to two minutes):
+Use the local server by default, pinned to version 0.2.0:
 
 ```sh
-claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0
 pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music
 ```
 
-For full-length files, use the [local checkout instructions](docs/Getting-Started.md#from-a-clone).
-The registry package is prepared and tested but awaits publication; package-based
-installation is not available yet. The current skills installer requires Node 22.20+.
+Local processing keeps narration on your machine rather than uploading it to
+our hosted MCP. You can also [run from a clone](docs/Getting-Started.md#from-a-clone).
+The current skills installer requires Node 22.20+.
+
+For an explicitly chosen hosted alternative (clips up to two minutes), read
+[ownership, source and audio-processing details](docs/Vercel.md#ownership-and-audio-processing)
+before uploading narration:
+
+```sh
+claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
+```
 
 Then ask for it in plain words: "put Rain under `~/notes/article.mp3`."
 

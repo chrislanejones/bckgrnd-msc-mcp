@@ -10,34 +10,62 @@ acid, lofi, garage, breakbeat, liquid drum & bass) to audio files,
 and lays them under a voice. You pick the track and the level; the server does
 the measuring.
 
-## Setup
+## Setup: local server by default
 
-The hosted server is available at `https://bckgrnd-msc-mcp.vercel.app/mcp`.
-Installing this skill adds instructions; connect the MCP separately. For Claude Code:
-
-```sh
-claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
-```
-
-For other MCP clients, add that URL with Streamable HTTP transport.
-The local server needs Node 20+ and, for mixing/previews, ffmpeg. The registry
-package awaits publication; until then use a clone as documented in the
-repository's Getting Started page. The package command below applies after publication.
+Installing this skill adds instructions; connect the MCP separately. Prefer the
+local stdio server, pinned to `bckgrnd-msc-mcp@0.2.0`. It needs Node 20+ and
+ffmpeg/ffprobe for mixing and previews.
 
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0
 ```
 
-Other clients: run `pnpm dlx bckgrnd-msc-mcp` as a stdio server.
+Other clients: use command `pnpm` with arguments `dlx`, `bckgrnd-msc-mcp@0.2.0`.
+The package is maintained by Chris Lane Jones; inspect its
+[source repository](https://github.com/chrislanejones/bckgrnd-msc-mcp) and
+[package metadata](https://www.npmjs.com/package/bckgrnd-msc-mcp/v/0.2.0).
+The version pin selects this package release; it is not a security certification
+or a guarantee that every transitive dependency is pinned.
 
-If a tool says ffmpeg is missing, give the user the install line for their
-system. For clips within the hosted limits, the hosted server is another option.
+Audio rendering and mixing run locally without uploading narration to the
+hosted MCP. Installation downloads packages; your AI client's own handling of
+files and conversation data is separate. Local tools read and write paths with
+the permissions of the process running them.
+
+If ffmpeg is missing, explain how to install it. Do not silently switch to
+remote processing.
 
 | System | Install |
 |---|---|
 | macOS | `brew install ffmpeg` |
 | Debian / Ubuntu | `sudo apt install ffmpeg` |
 | Windows | `winget install Gyan.FFmpeg` |
+
+## Optional hosted alternative
+
+Use hosted processing only when the user chooses it, including authorization to
+upload the selected narration. Chris Lane Jones operates the project's public
+Vercel endpoint at `https://bckgrnd-msc-mcp.vercel.app/mcp`.
+
+```sh
+claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
+```
+
+Other clients can connect using Streamable HTTP. The
+[HTTP handler](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/api/mcp.ts),
+[audio implementation](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/src/remote.ts),
+and [deployment documentation](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/docs/Vercel.md)
+are public. This is an operator-controlled, unversioned endpoint: source links
+allow inspection but do not attest to the code currently deployed.
+
+Hosted mixing sends narration bytes over HTTPS to Vercel, where Node, the WASM
+engine and ffmpeg process them. Audio is written to a temporary job directory;
+the application attempts to remove it in a `finally` block after processing and
+returns MP3 bytes in the MCP response. It provides no persistent audio storage
+or download links. Cleanup cannot be guaranteed after abrupt process termination;
+these code behaviors are not a guarantee about Vercel's infrastructure logs or
+retention, or your client's data handling. Use local processing for audio you do
+not want to send to this operator and hosting provider.
 
 ## The tools
 
