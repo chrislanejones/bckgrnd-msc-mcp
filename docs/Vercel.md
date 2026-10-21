@@ -10,6 +10,9 @@ ffmpeg and ffprobe are bundled at build time.
 - Render and mix output: at most 120 seconds, including lead-in and tail.
 - Narration upload: at most 2 MiB, supplied as real base64 file contents and
   `voice_format` (`mp3`, `wav`, `ogg`, `flac`). Local filesystem paths are not accepted.
+- HTTP bodies must use `Content-Type: application/json` and fit 3 MiB, including
+  base64 and JSON overhead. Oversized declared lengths and non-JSON media types
+  are rejected before the handler reads the body; chunked uploads are also capped.
 - Output: embedded MCP audio (`audio/mpeg`, 96 kbps), with metadata. Clients must
   support audio content or save its base64 bytes as an MP3. There is no persistent
   download URL. Temporary files are removed after the response is prepared.

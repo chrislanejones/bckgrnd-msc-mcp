@@ -1,5 +1,12 @@
 # Change Summary
 
+## Security hardening: 10-21-2026
+
+- Reject oversized declared HTTP bodies and non-JSON media types before reading
+  MCP requests. Retain the streaming byte limit for uploads without a length.
+- Regression tests cover an oversized upload that never sends its body, rejected
+  media types, and valid JSON with a charset.
+
 ## v0.2.0: 10-21-2026 — package publication pending
 
 - Hosted Streamable HTTP MCP on Vercel, with bounded audio uploads and embedded MP3 results.

@@ -1,4 +1,4 @@
-import { createServer } from 'node:http';
+import { createServer, request } from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -55,6 +55,32 @@ it('rejects long renders, invalid uploads, malformed JSON and foreign origins', 
   expect(result.isError).toBe(true);
   const invalid = await client.callTool({ name: 'bckgrnd_mix_under_voice', arguments: { track: 'rain', voice_format: 'wav', voice_base64: '!!!!' } });
   expect(invalid.isError).toBe(true);
-  expect((await fetch(url, { method: 'POST', body: '{' })).status).toBe(400);
+  expect((await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' })).status).toBe(400);
   expect((await fetch(url, { method: 'POST', headers: { origin: 'https://untrusted.example' }, body: '{}' })).status).toBe(403);
+});
+
+it('rejects oversized declared uploads before waiting for the body', async () => {
+  const status = await new Promise<number | undefined>((resolve, reject) => {
+    const req = request(url, { method: 'POST', headers: {
+      'content-type': 'application/json', 'content-length': String(3 * 1024 * 1024 + 1),
+    } }, (res) => {
+      resolve(res.statusCode);
+      res.resume();
+      req.destroy();
+    });
+    req.on('error', reject);
+    req.setTimeout(2000, () => req.destroy(new Error('Server waited for an oversized body')));
+    req.flushHeaders(); // Deliberately send no body: rejection must be immediate.
+  });
+  expect(status).toBe(413);
+});
+
+it('rejects non-JSON media types and accepts JSON with a charset', async () => {
+  expect((await fetch(url, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: '{}' })).status).toBe(415);
+  const response = await fetch(url, { method: 'POST', headers: {
+    'content-type': 'application/json; charset=utf-8', accept: 'application/json, text/event-stream',
+  }, body: JSON.stringify({ jsonrpc: '2.0', id: 99, method: 'tools/list', params: {} }) });
+  expect(response.status).toBe(200);
+  const body = await response.json() as { result: { tools: unknown[] } };
+  expect(body.result.tools).toHaveLength(3);
 });

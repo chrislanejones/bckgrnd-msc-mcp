@@ -33,6 +33,18 @@ export default async function handler(req: IncomingMessage & { body?: unknown },
       return;
     }
   }
+  // Reject from headers before reading/serializing an attacker-controlled body.
+  // The streaming limit below still covers chunked uploads and absent lengths.
+  const length = req.headers['content-length'];
+  if (length !== undefined && (!/^\d+$/.test(length) || Number(length) > MAX_REQUEST_BYTES)) {
+    res.writeHead(413).end('Request too large');
+    return;
+  }
+  const contentType = req.headers['content-type']?.split(';', 1)[0]?.trim().toLowerCase();
+  if (contentType !== 'application/json') {
+    res.writeHead(415).end('Content-Type must be application/json');
+    return;
+  }
   let body: unknown;
   try {
     if (req.body !== undefined) {
