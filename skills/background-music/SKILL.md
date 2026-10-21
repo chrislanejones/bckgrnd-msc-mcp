@@ -12,8 +12,6 @@ the measuring.
 
 ## Setup: local server by default
 
-npm accepted publication of `bckgrnd-msc-mcp@0.2.0`, but registry processing is still pending. If the pinned command returns a version-not-found error, use the local [source-build instructions](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/docs/Getting-Started.md#from-a-clone) until the version becomes available.
-
 Installing this skill adds instructions; connect the MCP separately. Prefer the
 local stdio server, pinned to `bckgrnd-msc-mcp@0.2.0`. It needs Node 20+ and
 ffmpeg/ffprobe for mixing and previews.

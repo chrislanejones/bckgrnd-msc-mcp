@@ -15,8 +15,6 @@
 
 ## Add the local server to your client
 
-npm accepted publication of `bckgrnd-msc-mcp@0.2.0`, but registry processing is still pending. If the pinned command returns a version-not-found error, use the local [source-build instructions](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/docs/Getting-Started.md#from-a-clone) until the version becomes available.
-
 Use the local server by default. The commands pin version 0.2.0.
 
 It's a stdio server. Every client starts it the same way: `pnpm dlx bckgrnd-msc-mcp@0.2.0`.

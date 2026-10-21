@@ -22,7 +22,7 @@ The service is free, and the source is MIT licensed.
   including intro and tail, is limited to 120 seconds. Results embed MP3 audio.
 - Local setup requires Node.js 20+, pnpm, and ffmpeg for mixing and previews.
   Build from the public repository with `pnpm install` and `pnpm run build`,
-  then run `node dist/index.js`. npm accepted publication; registry processing is pending. Once available, the local package command is `pnpm dlx bckgrnd-msc-mcp@0.2.0`.
+  then run `node dist/index.js`. The local package command is `pnpm dlx bckgrnd-msc-mcp@0.2.0`.
 - `BCKGRND_MSC_API_TOKEN` (optional, self-hosted deployments): require bearer
   authentication on your own deployment. Not required for the public endpoint.
 
