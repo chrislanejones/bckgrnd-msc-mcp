@@ -2,42 +2,50 @@
 
 An MCP server that puts music under a voice. Hand it a narration MP3 and a track
 name, and it renders the music to the right length, sets it under the voice by
-measured loudness, dips it while the voice talks, and hands back one file.
+**measured loudness**, dips it while the voice talks, and hands back one file.
 
 The music comes from [bckgrnd-msc](https://github.com/chrislanejones/bckgrnd-msc), a
-stem machine: eighteen tracks, eight stems each, synthesized live by a Rust engine.
-This server runs that same engine, compiled to WebAssembly, in Node. No samples, no
-streaming service, no licensing questions. The music is made on your machine when
-you ask for it.
+stem machine with eighteen tracks and eight stems each, synthesized by a **Rust**
+engine. This server runs that same engine, compiled to **WebAssembly**, in Node. No
+samples, no streaming service, no licensing questions. The music is made on your
+machine when you ask for it.
 
 ## Quick start
 
+Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
+(`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
+
 ```sh
-claude mcp add bckgrnd-msc -- npx -y bckgrnd-msc-mcp
+claude mcp add bckgrnd-msc -- npx -y bckgrnd-msc-mcp   # the server
+npx skills add chrislanejones/bckgrnd-msc-mcp          # the skill
 ```
-
-Any other MCP client: run `npx -y bckgrnd-msc-mcp` as a stdio server. It needs
-Node 20 or newer. Mixing under a voice also needs ffmpeg.
-
-| System | ffmpeg |
-|---|---|
-| macOS | `brew install ffmpeg` |
-| Debian / Ubuntu | `sudo apt install ffmpeg` |
-| Windows | `winget install Gyan.FFmpeg` |
 
 Then ask for it in plain words: "put Rain under `~/notes/article.mp3`."
 
-## The skill
+The server gives an agent the tools. The skill gives it the taste: which track
+suits which content, where to set the level, and what to change when the listener
+says "I can't hear the words." Other clients, settings and running from a clone →
+**[Getting Started](docs/Getting-Started.md)**.
 
-The server does the work. The skill teaches an agent the taste: which track suits
-which content, where to set the level, and what to change when the listener says
-"I can't hear the words."
+## Documentation
 
-```sh
-npx skills add chrislanejones/bckgrnd-msc-mcp
-```
+- **[Getting Started](docs/Getting-Started.md)**: install it in Claude Code, Claude Desktop or any client, add the skill, the settings.
+- **[Tools](docs/Tools.md)**: the three tools, every argument, what comes back, and what the errors mean.
+- **[Levels](docs/Levels.md)**: how the music level is set by measured loudness, the ducking, and which numbers to pick for which content.
+- **[Tracks](docs/Tracks.md)**: the eighteen tracks and eight stems, their moods and energy, and matching music to content.
+- **[Architecture](docs/Architecture.md)**: one engine in two places, streaming to disk, and the ffmpeg mix step by step.
+- **[File Map](docs/File-Map.md)**: where everything lives.
+- **[Updating the Engine](docs/Updating-the-Engine.md)**: copying a new engine or new tracks in from bckgrnd-msc.
+- **[Development](docs/Development.md)**: the gates, what the tests check, and releasing.
+- **[Change Summary](docs/Change-summary.md)**: the full dated release history.
+- **[The skill](skills/bckgrnd-music/SKILL.md)**: what the agent reads.
 
-It's in [skills/bckgrnd-music/SKILL.md](skills/bckgrnd-music/SKILL.md).
+Design decisions live in **[docs/adr/](docs/adr/INDEX.md)**. Each one says what was
+decided, what was turned down, and what would make it the wrong call later.
+
+| ADR | Decision |
+|---|---|
+| [001](docs/adr/001-typescript-server-over-vendored-wasm.md) | A TypeScript server runs bckgrnd-msc's own `.wasm` build, and ffmpeg does the mix |
 
 ## Tools
 
@@ -47,72 +55,30 @@ It's in [skills/bckgrnd-music/SKILL.md](skills/bckgrnd-music/SKILL.md).
 | `bckgrnd_render_track` | One track to a 48 kHz stereo WAV of any length, up to an hour. Cut any stems, set the fades |
 | `bckgrnd_mix_under_voice` | A voice file plus a track, or your own music file, to one MP3 or WAV |
 
-## How the level is set
+Rendering runs about **20x faster** than real time. Seven minutes of music takes
+about eighteen seconds.
 
-Every voice file comes in at a different volume. A fixed "music at -16 dB" is too loud
-under a quiet text-to-speech file and too quiet under a hot podcast take. So nothing
-here is fixed.
+## Tech Stack
 
-1. Both files are measured in LUFS, the loudness scale podcasts and streaming services
-   use.
-2. The voice is turned up or down to `loudness_lufs` (default **-16**, the usual
-   spoken-word level).
-3. The music is set `music_db` under the voice (default **-14 LU**).
-4. The voice drives a compressor on the music, so the music dips while someone is
-   talking and comes back between paragraphs.
+- **Rust → WebAssembly**: the bckgrnd-msc engine, built with `wasm-pack`, copied into `vendor/`
+- **TypeScript** on **Node 20+**: the server
+- **MCP TypeScript SDK**: the protocol, over stdio
+- **Zod**: tool argument checking
+- **ffmpeg**: loudness measuring (`ebur128`), ducking (`sidechaincompress`) and MP3 encoding
+- **Vitest**: tests against the real server, real audio and real ffmpeg
 
-A quiet voice and a loud voice through the same settings come out at the same
-loudness, with the same balance. The tests check that.
+## Changelog
 
-## The tracks
+Latest release below. Full dated history → **[docs/Change-summary.md](docs/Change-summary.md)**.
 
-| Section | Style | Tracks | bpm | Energy |
-|---|---|---|---|---|
-| Lofi | Chillhop | Rain, Study, Porch | 76–92 | 1 |
-| Lofi | Dusty | Tape, Nightbus | 80–88 | 1 |
-| Lofi | Jazz | Kettle | 78 | 1 |
-| EDM | Deep | Night Drive, Glass | 110–116 | 2 |
-| EDM | House | Warehouse, Basement, Tunnel | 122–128 | 3 |
-| EDM | Acid | Acid Line | 134 | 4 |
-| Breaks | Garage | Southside, Pirate | 132–134 | 3 |
-| Breaks | Breakbeat | Bricks, Rave Tape | 130–136 | 4 |
-| Breaks | Liquid DnB | Lowtide, Slipstream | 172–174 | 3 |
+### v0.1.0: 10-21-2026
 
-The stems are kick, clap, hats, bass, stab, lead, pad and arp. Under speech, cut the
-lead. A melody fights words.
+**First release. Music under a voice, with levels set by measured loudness.**
 
-The moods and energy ratings are a first pass, set by style and tempo. They live in
-[src/moods.ts](src/moods.ts) and they'll move as I listen to more narration over them.
-
-## Speed
-
-Rendering runs about twenty times faster than real time. Seven minutes of music takes
-about eighteen seconds on a laptop.
-
-## Updating the engine
-
-The engine and the track library are copied in from a built bckgrnd-msc checkout.
-This repo never builds Rust.
-
-```sh
-cd ../bckgrnd-msc && pnpm run build:engine
-cd ../bckgrnd-msc-mcp && pnpm run sync-engine ../bckgrnd-msc
-```
-
-`vendor/SOURCE.json` records which bckgrnd-msc commit the copy came from.
-
-## Development
-
-```sh
-pnpm install
-pnpm run typecheck
-pnpm run lint
-pnpm test
-pnpm run build
-```
-
-The tests run the real server in memory, render real audio and, when ffmpeg is
-installed, mix real files.
+Three tools: list the tracks, render one to a WAV, and mix one under a narration.
+The mix measures both files, sets the voice to -16 LUFS and the music 14 LU under
+it, and dips the music while the voice talks. A quiet voice file and a loud one
+come out at the same level. The `bckgrnd-music` skill matches tracks to content.
 
 ## License
 
