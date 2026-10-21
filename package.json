@@ -24,7 +24,9 @@
   },
   "files": [
     "dist",
-    "vendor",
+    "vendor/engine",
+    "vendor/library",
+    "vendor/SOURCE.json",
     "skills",
     "README.md",
     "LICENSE"
@@ -39,7 +41,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "sync-engine": "node scripts/sync-engine.mjs",
-    "prepare": "tsc -p tsconfig.build.json"
+    "prepare": "tsc -p tsconfig.build.json",
+    "build:vercel": "pnpm run build && node scripts/prepare-vercel.mjs",
+    "pretest": "node scripts/prepare-vercel.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
@@ -49,6 +53,8 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^20.19.43",
     "eslint": "^10.13.0",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.72.0",
     "vitest": "^5.0.5"

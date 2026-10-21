@@ -1,5 +1,8 @@
 node_modules/
 dist/
+.vercel/
+*.tgz
 *.wav
 *.mp3
 !test/fixtures/*.wav
+vendor/runtime/

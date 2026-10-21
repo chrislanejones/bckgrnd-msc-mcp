@@ -31,6 +31,15 @@ system and stop. Don't switch tools.
 
 ## The tools
 
+When connected to the hosted Vercel server, follow its tool schemas: clips are
+limited to 120 seconds including lead-in/tail, narration uses `voice_base64`
+and `voice_format` (2 MiB maximum), and results contain embedded MP3 audio.
+Read and encode the actual file using available file tools; never invent bytes.
+Save or present the returned audio if the client supports it. If the client
+cannot upload/save audio, or the request exceeds these limits, explain that the
+local stdio server is required. Hosted calls do not accept filesystem paths,
+custom music files or overwrite options. The examples below describe local use.
+
 | Tool | What it does |
 |---|---|
 | `bckgrnd_list_tracks` | Every track with bpm, mood, energy (1-5) and what it suits. Filter with `section` or `max_energy` |

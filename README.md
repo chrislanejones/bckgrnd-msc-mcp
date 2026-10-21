@@ -29,6 +29,7 @@ says "I can't hear the words." Other clients, settings and running from a clone 
 
 ## Documentation
 
+- **[Vercel hosting](docs/Vercel.md)**: remote MCP endpoint, audio uploads and hosted clip limits.
 - **[Getting Started](docs/Getting-Started.md)**: install it in Claude Code, Claude Desktop or any client, add the skill, the settings.
 - **[Tools](docs/Tools.md)**: the three tools, every argument, what comes back, and what the errors mean.
 - **[Levels](docs/Levels.md)**: how the music level is set by measured loudness, the ducking, and which numbers to pick for which content.

@@ -1,0 +1,10 @@
+{
+  "name": "bckgrnd-msc",
+  "description": "Synthesized background music and narration mixing",
+  "mcp_endpoint": "/mcp",
+  "transport": "Streamable HTTP",
+  "max_audio_seconds": 120,
+  "max_upload_bytes": 2097152,
+  "output": "MP3 embedded in MCP audio content",
+  "source": "https://github.com/chrislanejones/bckgrnd-msc-mcp"
+}
