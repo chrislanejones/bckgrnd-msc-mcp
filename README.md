@@ -17,6 +17,8 @@ machine when you ask for it.
 Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
+npm accepted publication of `bckgrnd-msc-mcp@0.2.0`, but registry processing is still pending. If the pinned command returns a version-not-found error, use the local [source-build instructions](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/docs/Getting-Started.md#from-a-clone) until the version becomes available.
+
 Use the local server by default, pinned to version 0.2.0:
 
 ```sh
@@ -89,7 +91,7 @@ about eighteen seconds.
 
 Latest release below. Full dated history → **[docs/Change-summary.md](docs/Change-summary.md)**.
 
-### v0.2.0: 10-21-2026 — package publication pending
+### v0.2.0: 10-21-2026
 
 Vercel HTTP hosting, atomic file writes, unique render filenames, cancellation
 and progress, measured export loudness/true peak, narration previews, and CI

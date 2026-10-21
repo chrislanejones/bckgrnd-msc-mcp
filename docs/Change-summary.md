@@ -11,7 +11,7 @@
 - Regression tests cover an oversized upload that never sends its body, rejected
   media types, and valid JSON with a charset.
 
-## v0.2.0: 10-21-2026 — package publication pending
+## v0.2.0: 10-21-2026
 
 - Hosted Streamable HTTP MCP on Vercel, with bounded audio uploads and embedded MP3 results.
 - Unique render paths and atomic outputs preserve existing files on failure/cancellation.
@@ -19,7 +19,7 @@
 - Finished-file LUFS and true-peak measurements; limiter makeup gain disabled.
 - Compare up to three tracks under a short narration excerpt using the local preview tool.
 - CI on Node 22/24 and an isolated install/stdio smoke test of the actual package archive.
-- Registry publication still requires authentication; hosted deployment is separate.
+- npm accepted publication of `bckgrnd-msc-mcp@0.2.0`; registry processing and a registry-install verification remain pending. The companion skill defaults to this pinned local version; hosted processing is an explicit alternative with source and audio-processing disclosures.
 
 ## v0.1.0: 10-21-2026
 
