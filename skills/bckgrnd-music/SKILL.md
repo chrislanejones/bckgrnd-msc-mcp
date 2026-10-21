@@ -6,14 +6,23 @@ description: Put background music under narration, podcasts, screen recordings o
 # bckgrnd-music: music under a voice
 
 The bckgrnd-msc MCP server renders eighteen synthesized tracks (house, deep,
-acid, lofi, garage, breakbeat, liquid drum & bass) to audio files of any length,
+acid, lofi, garage, breakbeat, liquid drum & bass) to audio files,
 and lays them under a voice. You pick the track and the level; the server does
 the measuring.
 
 ## Setup
 
 The hosted server is available at `https://bckgrnd-msc-mcp.vercel.app/mcp`.
-The local server needs Node 20+ and, for mixing/previews, ffmpeg.
+Installing this skill adds instructions; connect the MCP separately. For Claude Code:
+
+```sh
+claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
+```
+
+For other MCP clients, add that URL with Streamable HTTP transport.
+The local server needs Node 20+ and, for mixing/previews, ffmpeg. The registry
+package awaits publication; until then use a clone as documented in the
+repository's Getting Started page. The package command below applies after publication.
 
 ```sh
 claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp
@@ -22,7 +31,7 @@ claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp
 Other clients: run `pnpm dlx bckgrnd-msc-mcp` as a stdio server.
 
 If a tool says ffmpeg is missing, give the user the install line for their
-system and stop. Don't switch tools.
+system. For clips within the hosted limits, the hosted server is another option.
 
 | System | Install |
 |---|---|
@@ -44,7 +53,7 @@ custom music files or overwrite options. The examples below describe local use.
 | Tool | What it does |
 |---|---|
 | `bckgrnd_list_tracks` | Every track with bpm, mood, energy (1-5) and what it suits. Filter with `section` or `max_energy` |
-| `bckgrnd_render_track` | One track to a WAV of any length, with stems cut and fades |
+| `bckgrnd_render_track` | One track to a WAV up to 3,600 seconds locally, with stems cut and fades |
 | `bckgrnd_mix_under_voice` | A voice file plus a track (or the user's own music) to one MP3 or WAV, levels matched |
 
 For music under a voice, use `bckgrnd_mix_under_voice` with `track`. It renders
