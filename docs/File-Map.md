@@ -20,7 +20,7 @@
 | `vendor/library/` | The tracks, copied from bckgrnd-msc's `public/library/` |
 | `vendor/SOURCE.json` | Which bckgrnd-msc commit `vendor/` came from |
 | `scripts/sync-engine.mjs` | Refreshes `vendor/` from a bckgrnd-msc checkout |
-| `skills/bckgrnd-music/SKILL.md` | The companion skill discoverable by the skills CLI |
+| `skills/background-music/SKILL.md` | The companion skill discoverable by the skills CLI |
 | `test/tools.test.ts` | The tests. They run the real server in memory |
 | `docs/` | These pages |
 | `docs/adr/` | Design decisions |

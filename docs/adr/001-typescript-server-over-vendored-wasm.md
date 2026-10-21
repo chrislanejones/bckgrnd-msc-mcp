@@ -20,7 +20,7 @@ vendors the engine and library into `vendor/` from a built checkout;
 Mixing under voice shells out to ffmpeg: ebur128 loudness on both files, voice
 to a target (default -16 LUFS), music N LU below it (default -14), then
 sidechain-compressed by the voice. Ships as npm `bckgrnd-msc-mcp` plus
-`skills/bckgrnd-music/SKILL.md` for skills.sh.
+`skills/background-music/SKILL.md` for skills.sh.
 
 ## Consequences
 + One engine: agents render through the same `.wasm` the website plays, so

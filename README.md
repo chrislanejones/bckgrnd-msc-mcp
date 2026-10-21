@@ -21,7 +21,7 @@ The hosted MCP is available now (clips up to two minutes):
 
 ```sh
 claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
-pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill bckgrnd-music
+pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music
 ```
 
 For full-length files, use the [local checkout instructions](docs/Getting-Started.md#from-a-clone).
@@ -47,7 +47,7 @@ says "I can't hear the words." Other clients, settings and running from a clone 
 - **[Updating the Engine](docs/Updating-the-Engine.md)**: copying a new engine or new tracks in from bckgrnd-msc.
 - **[Development](docs/Development.md)**: the gates, what the tests check, and releasing.
 - **[Change Summary](docs/Change-summary.md)**: the full dated release history.
-- **[The skill](skills/bckgrnd-music/SKILL.md)**: what the agent reads.
+- **[The skill](skills/background-music/SKILL.md)**: what the agent reads.
 
 Design decisions live in **[docs/adr/](docs/adr/INDEX.md)**. Each one says what was
 decided, what was turned down, and what would make it the wrong call later.
@@ -95,7 +95,7 @@ local server adds `bckgrnd_preview_tracks`.
 Three tools: list the tracks, render one to a WAV, and mix one under a narration.
 The mix measures both files, sets the voice to -16 LUFS and the music 14 LU under
 it, and dips the music while the voice talks. A quiet voice file and a loud one
-come out at the same level. The `bckgrnd-music` skill matches tracks to content.
+come out at the same level. The `background-music` skill matches tracks to content.
 
 ## License
 

@@ -35,11 +35,11 @@ Content & Media
 - Mix narration with music using measured loudness and automatic ducking.
 - Return output loudness and true-peak measurements.
 - Compare tracks against a narration excerpt using the local preview tool.
-- Follow the companion bckgrnd-music skill for track selection and mixing guidance.
+- Follow the companion background-music skill for track selection and mixing guidance.
 
 ## Getting Started
 - Connect: `claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp`
-- Install the companion skill: `pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill bckgrnd-music`
+- Install the companion skill: `pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music`
 - "List some calm tracks for a narrated tutorial."
 - "Render 30 seconds of Study without the lead melody."
 - "Put quiet background music under this narration and dip it while I speak."

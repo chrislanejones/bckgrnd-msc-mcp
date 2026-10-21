@@ -1,9 +1,9 @@
 ---
-name: bckgrnd-music
+name: background-music
 description: Put background music under narration, podcasts, screen recordings or any audio, using the bckgrnd-msc MCP server. Picks a track that fits the content, sets the music level against the voice by measured loudness, and dips it while the voice talks. Use for "add music under this", "put a beat behind this narration", "make this MP3 less dry", "background music for this video", or after a text-to-speech step when the listener wants music under the reading.
 ---
 
-# bckgrnd-music: music under a voice
+# background-music: music under a voice
 
 The bckgrnd-msc MCP server renders eighteen synthesized tracks (house, deep,
 acid, lofi, garage, breakbeat, liquid drum & bass) to audio files,

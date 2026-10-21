@@ -1,5 +1,9 @@
 # Change Summary
 
+## 2026-10-21 — Companion skill rename
+
+- Renamed the companion skill from `bckgrnd-music` to `background-music` and updated installation commands and documentation links.
+
 ## Security hardening: 10-21-2026
 
 - Reject oversized declared HTTP bodies and non-JSON media types before reading
