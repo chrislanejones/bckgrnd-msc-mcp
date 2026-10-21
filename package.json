@@ -1,0 +1,56 @@
+{
+  "name": "bckgrnd-msc-mcp",
+  "version": "0.1.0",
+  "description": "An MCP server that renders bckgrnd-msc tracks to WAV and lays them under a narration, turned down while the voice talks.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Chris Lane Jones",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chrislanejones/bckgrnd-msc-mcp.git"
+  },
+  "homepage": "https://github.com/chrislanejones/bckgrnd-msc-mcp#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "music",
+    "audio",
+    "wasm",
+    "background-music",
+    "narration"
+  ],
+  "bin": {
+    "bckgrnd-msc-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "vendor",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.26.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "sync-engine": "node scripts/sync-engine.mjs",
+    "prepare": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^20.19.43",
+    "eslint": "^10.13.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}
