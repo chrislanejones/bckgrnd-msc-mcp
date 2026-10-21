@@ -13,9 +13,7 @@ the measuring.
 ## Setup
 
 The hosted server is available at `https://bckgrnd-msc-mcp.vercel.app/mcp`.
-The local server needs Node 20+ and, for mixing/previews, ffmpeg. The registry
-package awaits publication; until then use a clone as documented in the
-repository's Getting Started page. The package command below applies after publication.
+The local server needs Node 20+ and, for mixing/previews, ffmpeg.
 
 ```sh
 claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp

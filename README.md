@@ -22,9 +22,14 @@ claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/m
 pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill bckgrnd-music
 ```
 
-For full-length files, use the [local checkout instructions](docs/Getting-Started.md#from-a-clone).
-The registry package is prepared and tested but awaits publication; package-based
-installation is not available yet. The current skills installer requires Node 22.20+.
+For full-length files, install the local server:
+
+```sh
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp
+```
+
+You can also [run from a clone](docs/Getting-Started.md#from-a-clone).
+The current skills installer requires Node 22.20+.
 
 Then ask for it in plain words: "put Rain under `~/notes/article.mp3`."
 
@@ -79,7 +84,7 @@ about eighteen seconds.
 
 Latest release below. Full dated history → **[docs/Change-summary.md](docs/Change-summary.md)**.
 
-### v0.2.0: 10-21-2026 — package publication pending
+### v0.2.0: 10-21-2026
 
 Vercel HTTP hosting, atomic file writes, unique render filenames, cancellation
 and progress, measured export loudness/true peak, narration previews, and CI

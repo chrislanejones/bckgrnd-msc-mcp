@@ -24,9 +24,6 @@ requirements. No local ffmpeg install is needed for hosted calls.
 
 ## Add the local server to your client
 
-The registry package is not published yet. Use **From a clone** below until it is.
-The following package commands are for after publication.
-
 It's a stdio server. Every client starts it the same way: `pnpm dlx bckgrnd-msc-mcp`.
 
 ### Claude Code
