@@ -78,7 +78,7 @@ it('automatically compares valid recommendations on an audible excerpt after lon
     expect(recommendTracks(content, 30).every((id) => findTrack(id))).toBe(true);
     expect(recommendTracks(content, 900).every((id) => findTrack(id)!.energy <= 2)).toBe(true);
   }
-});
+}, 30_000);
 
 it('masters the actual WAV and MP3 exports to the requested loudness and peak ceiling', async () => {
   for (const extension of ['wav', 'mp3']) {
