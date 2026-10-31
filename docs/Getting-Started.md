@@ -15,20 +15,23 @@
 
 ## Add the local server to your client
 
-Use the local server by default. These commands use the versioned GitHub release archive; npm registry publication is pending maintainer reauthentication.
+Use the local server by default. The commands pin version 0.3.0 from npm.
+The same package is also attached to the
+[GitHub release](https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/tag/v0.3.0):
+swap `bckgrnd-msc-mcp@0.3.0` for `https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz` to install from there.
 
-It's a stdio server. Every client starts it the same way: `pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz`.
+It's a stdio server. Every client starts it the same way: `pnpm dlx bckgrnd-msc-mcp@0.3.0`.
 
 ### Claude Code
 
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 ```
 
 ### Codex
 
 ```sh
-codex mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz
+codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 ```
 
 The skill and MCP connection are separate. Restart the client if newly added
@@ -41,7 +44,7 @@ tools do not appear. Check configured entries with `codex mcp list`.
   "mcpServers": {
     "bckgrnd-msc": {
       "command": "pnpm",
-      "args": ["dlx", "https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz"]
+      "args": ["dlx", "bckgrnd-msc-mcp@0.3.0"]
     }
   }
 }
@@ -109,7 +112,7 @@ Everything is optional.
 Pass them through your client's `env` block, or put them before the command:
 
 ```sh
-claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz
+claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 ```
 
 ## Check it works
@@ -117,7 +120,7 @@ claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- pnpm dlx
 Run the setup check first:
 
 ```sh
-pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz --check
+pnpm dlx bckgrnd-msc-mcp@0.3.0 --check
 ```
 
 It returns JSON, exits 0 on success (1 on a failed check), and checks Node,

@@ -17,17 +17,16 @@ machine when you ask for it.
 Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
-Use the local server by default, pinned to the v0.3.0 release archive.
-The GitHub package is ready to install; publication to the npm registry is
-pending restoration of the maintainer's registry login.
+Use the local server by default, pinned to version 0.3.0:
 
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music
 ```
 
 Local processing keeps narration on your machine rather than uploading it to
-our hosted MCP. You can also [run from a clone](docs/Getting-Started.md#from-a-clone).
+our hosted MCP. You can also [run from a clone](docs/Getting-Started.md#from-a-clone)
+or install the [v0.3.0 release archive](https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/tag/v0.3.0).
 The current skills installer requires Node 22.20+.
 
 For an explicitly chosen hosted alternative (clips up to two minutes), read
@@ -54,8 +53,8 @@ Ask your agent:
 - "Add music to this screen recording and keep the video synchronized."
 - "Master the finished export to -18 LUFS with a -2 dBTP ceiling."
 
-Local setup check: `pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz --check`.
-Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz`.
+Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.0 --check`.
+Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0`.
 
 [Workflow examples](docs/Workflows.md) cover previews, presets, video exports
 and mastering. All seven tools run locally. Hosted processing adds previews,

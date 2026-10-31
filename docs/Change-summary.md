@@ -2,7 +2,7 @@
 
 ## v0.3.0: 10-31-2026
 
-Distribution: GitHub release archive and hosted deployment. npm registry publication is pending maintainer reauthentication; the v0.3.0 install commands use the release archive.
+Distribution: npm (`bckgrnd-msc-mcp@0.3.0`), GitHub release archive and hosted deployment.
 
 - Automatic audible-excerpt selection and two track recommendations, with full-export arguments returned by local previews.
 - Hosted previews return labeled MP3 attachments; uploaded audio remains bounded by the existing limits.
