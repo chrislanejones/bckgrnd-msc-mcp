@@ -15,15 +15,24 @@
 
 ## Add the local server to your client
 
-Use the local server by default. The commands pin version 0.2.0.
+Use the local server by default. The commands pin version 0.3.0.
 
-It's a stdio server. Every client starts it the same way: `pnpm dlx bckgrnd-msc-mcp@0.2.0`.
+It's a stdio server. Every client starts it the same way: `pnpm dlx bckgrnd-msc-mcp@0.3.0`.
 
 ### Claude Code
 
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 ```
+
+### Codex
+
+```sh
+codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
+```
+
+The skill and MCP connection are separate. Restart the client if newly added
+tools do not appear. Check configured entries with `codex mcp list`.
 
 ### Claude Desktop, Cursor and other JSON configs
 
@@ -32,7 +41,7 @@ claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0
   "mcpServers": {
     "bckgrnd-msc": {
       "command": "pnpm",
-      "args": ["dlx", "bckgrnd-msc-mcp@0.2.0"]
+      "args": ["dlx", "bckgrnd-msc-mcp@0.3.0"]
     }
   }
 }
@@ -71,8 +80,20 @@ track suits which content, where to set the level, and what to change when the
 listener complains.
 
 ```sh
-pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp
+pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music
 ```
+
+Choose Claude Code and/or Codex in the installer. For a shared global install:
+
+```sh
+pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music -g -a claude-code codex -y
+```
+
+Update just this global skill with `pnpm dlx skills update background-music -g`.
+Avoid installing both global and repository copies unless you want both scopes.
+The public skill lives in GitHub under `skills/background-music`; skills.sh
+indexes installations rather than accepting a separate skill package upload.
+See the [skills.sh FAQ](https://skills.sh/docs/faq).
 
 ## Settings
 
@@ -81,16 +102,28 @@ Everything is optional.
 | Variable | Default | What it does |
 |---|---|---|
 | `BCKGRND_MSC_OUT_DIR` | `<system temp>/bckgrnd-msc` | Where `bckgrnd_render_track` writes when no `output_path` is given |
+| `BCKGRND_MSC_CONFIG_DIR` | `~/.config/bckgrnd-msc` | Absolute folder for saved presets |
 | `FFMPEG_PATH` | `ffmpeg` on `PATH` | A specific ffmpeg binary |
 | `FFPROBE_PATH` | `ffprobe` on `PATH` | A specific ffprobe binary |
 
 Pass them through your client's `env` block, or put them before the command:
 
 ```sh
-claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- pnpm dlx bckgrnd-msc-mcp@0.2.0
+claude mcp add bckgrnd-msc -e BCKGRND_MSC_OUT_DIR="$HOME/Music/beds" -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 ```
 
 ## Check it works
+
+Run the setup check first:
+
+```sh
+pnpm dlx bckgrnd-msc-mcp@0.3.0 --check
+```
+
+It returns JSON, exits 0 on success (1 on a failed check), and checks Node,
+ffmpeg/ffprobe, output-folder access and a real short WASM render. It removes
+its temporary files and prints connection commands without changing client
+configuration. The same check is available as `bckgrnd_check_setup`.
 
 Ask your agent: "list the bckgrnd-msc tracks." You should get eighteen back. Then
 "render 30 seconds of Rain" should hand you a WAV path in a second or two.

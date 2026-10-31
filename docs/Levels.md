@@ -66,7 +66,7 @@ with Night Drive under it: both mixes came out at **-15.6 LUFS**, peaks around
 | "Can't hear the words" | `music_db` down 4 |
 | "Can't hear the music" | `music_db` up 4 |
 | "The whole thing's too quiet" | `loudness_lufs` up 2 |
-| "The music keeps swelling and dropping" | `duck: false` |
+| "The music keeps swelling and dropping" | `ducking: "subtle"`; `duck: false` only for a steady bed |
 
 The ear wins. These are starting points.
 
@@ -81,3 +81,22 @@ disabled so it does not raise the measured gain settings.
 The speech-fixture regression checks that ducking reduces the music during
 speech and that it recovers during the silent tail. Measurements describe the
 output; this is not a guaranteed streaming-platform mastering target.
+
+## Ducking strength
+
+`ducking` accepts `subtle` (2:1, 60 ms attack, 1200 ms release), `normal`
+(original 6:1, 30 ms, 600 ms), or `strong` (10:1, 15 ms, 900 ms). Thresholds also
+change to provide progressively deeper reduction. `duck: false` overrides the
+strength. These are useful starting points; the listener's preference wins.
+The final limiter compensates its lookahead delay, including in video exports.
+
+## Optional final mastering
+
+Set `final_lufs` (-30 to -9) to normalize the complete finished mix, not just the
+voice. `true_peak_dbfs` (-9 to -0.5, default -1.5) sets its peak ceiling and requires
+`final_lufs`. Two-pass normalization is followed by measurements of the encoded
+WAV, MP3 or AAC/MP4. Bounded corrections account for encoding changes.
+`mastering_target_met` means loudness is within 0.7 LU and peak within 0.1 dB of
+the requested limits; always inspect the returned measurements. Extremely short
+or unusual material may miss the loudness target, which is reported explicitly.
+Targets are user-selected and are not certification for a streaming platform.

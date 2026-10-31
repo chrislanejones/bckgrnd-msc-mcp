@@ -1,180 +1,162 @@
 ---
 name: background-music
-description: Put background music under narration, podcasts, screen recordings or any audio, using the bckgrnd-msc MCP server. Picks a track that fits the content, sets the music level against the voice by measured loudness, and dips it while the voice talks. Use for "add music under this", "put a beat behind this narration", "make this MP3 less dry", "background music for this video", or after a text-to-speech step when the listener wants music under the reading.
+description: Add background music to narration, podcasts, screen recordings or videos using the bckgrnd-msc MCP server. Compare short previews, reuse favorite settings, keep speech clear, and export audio or synchronized video. Use when someone asks to put music under a voice, add a beat to a recording, or improve a narrated MP3 or video.
+metadata:
+  version: "0.3.0"
 ---
 
-# background-music: music under a voice
+# Background music under a voice
 
-The bckgrnd-msc MCP server renders eighteen synthesized tracks (house, deep,
-acid, lofi, garage, breakbeat, liquid drum & bass) to audio files,
-and lays them under a voice. You pick the track and the level; the server does
-the measuring.
+Use the bckgrnd-msc MCP server to choose music, compare it under actual speech,
+and export a mix. The server synthesizes eighteen tracks with eight stems;
+ffmpeg measures levels and lowers music while the voice talks. Respect the
+listener's requested track, level and workflow over the suggestions below.
 
-## Setup: local server by default
+## Connect and check
 
-Installing this skill adds instructions; connect the MCP separately. Prefer the
-local stdio server, pinned to `bckgrnd-msc-mcp@0.2.0`. It needs Node 20+ and
-ffmpeg/ffprobe for mixing and previews.
+Installing the skill adds instructions; connect the MCP separately. Local
+processing is the default: Node 20+, pnpm, ffmpeg and ffprobe are needed.
 
+Claude Code:
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 ```
 
-Other clients: use command `pnpm` with arguments `dlx`, `bckgrnd-msc-mcp@0.2.0`.
-The package is maintained by Chris Lane Jones; inspect its
-[source repository](https://github.com/chrislanejones/bckgrnd-msc-mcp) and
-[package metadata](https://www.npmjs.com/package/bckgrnd-msc-mcp/v/0.2.0).
-The version pin selects this package release; it is not a security certification
-or a guarantee that every transitive dependency is pinned.
-
-Audio rendering and mixing run locally without uploading narration to the
-hosted MCP. Installation downloads packages; your AI client's own handling of
-files and conversation data is separate. Local tools read and write paths with
-the permissions of the process running them.
-
-If ffmpeg is missing, explain how to install it. Do not silently switch to
-remote processing.
-
-| System | Install |
-|---|---|
-| macOS | `brew install ffmpeg` |
-| Debian / Ubuntu | `sudo apt install ffmpeg` |
-| Windows | `winget install Gyan.FFmpeg` |
-
-## Optional hosted alternative
-
-Use hosted processing only when the user chooses it, including authorization to
-upload the selected narration. Chris Lane Jones operates the project's public
-Vercel endpoint at `https://bckgrnd-msc-mcp.vercel.app/mcp`.
-
+Codex:
 ```sh
-claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp
+codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 ```
 
-Other clients can connect using Streamable HTTP. The
-[HTTP handler](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/api/mcp.ts),
-[audio implementation](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/src/remote.ts),
-and [deployment documentation](https://github.com/chrislanejones/bckgrnd-msc-mcp/blob/main/docs/Vercel.md)
-are public. This is an operator-controlled, unversioned endpoint: source links
-allow inspection but do not attest to the code currently deployed.
+Other clients: command `pnpm`, arguments `dlx`, `bckgrnd-msc-mcp@0.3.0`.
+Run `pnpm dlx bckgrnd-msc-mcp@0.3.0 --check`, or call `bckgrnd_check_setup`,
+when setup is new or a dependency fails. It tests Node, ffmpeg/ffprobe, output
+access and a real engine render, and provides fixes without changing settings.
 
-Hosted mixing sends narration bytes over HTTPS to Vercel, where Node, the WASM
-engine and ffmpeg process them. Audio is written to a temporary job directory;
-the application attempts to remove it in a `finally` block after processing and
-returns MP3 bytes in the MCP response. It provides no persistent audio storage
-or download links. Cleanup cannot be guaranteed after abrupt process termination;
-these code behaviors are not a guarantee about Vercel's infrastructure logs or
-retention, or your client's data handling. Use local processing for audio you do
-not want to send to this operator and hosting provider.
+If ffmpeg is missing: macOS `brew install ffmpeg`, Debian/Ubuntu
+`sudo apt install ffmpeg`, Windows `winget install Gyan.FFmpeg`.
 
-## The tools
+Chris Lane Jones maintains the [source](https://github.com/chrislanejones/bckgrnd-msc-mcp)
+and [package](https://www.npmjs.com/package/bckgrnd-msc-mcp/v/0.3.0).
+The version pin selects the release, not a security certification. Local audio
+processing does not upload narration to the hosted service; the AI client's
+handling of files and conversation data is separate.
 
-When connected to the hosted Vercel server, follow its tool schemas: clips are
-limited to 120 seconds including lead-in/tail, narration uses `voice_base64`
-and `voice_format` (2 MiB maximum), and results contain embedded MP3 audio.
-Read and encode the actual file using available file tools; never invent bytes.
-Save or present the returned audio if the client supports it. If the client
-cannot upload/save audio, or the request exceeds these limits, explain that the
-local stdio server is required. Hosted calls do not accept filesystem paths,
-custom music files or overwrite options. The examples below describe local use.
+If the user chooses hosted processing, including uploading their selected
+narration, read [references/hosted.md](references/hosted.md). Do not silently
+switch to hosted processing when local setup fails. Follow the connected tool
+schemas: older servers may lack the new tools or options.
 
-| Tool | What it does |
-|---|---|
-| `bckgrnd_list_tracks` | Every track with bpm, mood, energy (1-5) and what it suits. Filter with `section` or `max_energy` |
-| `bckgrnd_render_track` | One track to a WAV up to 3,600 seconds locally, with stems cut and fades |
-| `bckgrnd_mix_under_voice` | A voice file plus a track (or the user's own music) to one MP3 or WAV, levels matched |
+## Choose music and preview it
 
-For music under a voice, use `bckgrnd_mix_under_voice` with `track`. It renders
-the right length itself. Only reach for `bckgrnd_render_track` when the user
-wants the music on its own.
+1. Read available narration text or the user's description; do not pretend to
+   know the recording's contents when you have not heard or transcribed it.
+2. Call `bckgrnd_list_tracks` for valid ids, moods and energy.
+3. When a user has not settled on music for a longer recording, offer two short
+   previews before exporting the full file. Skip comparison when they already
+   chose a track, ask you to choose, or explicitly want a direct export.
+4. Call `bckgrnd_preview_tracks` with an absolute `voice_path`. Omit `tracks`
+   for two recommendations and set `content` to `narration`, `tutorial`,
+   `story`, `tech`, `news` or `hype`. Or pass 1–3 selected track ids.
+   `seconds` defaults to 20 (15–30 allowed).
+5. Omit `start_seconds` to select an audible section automatically; this detects
+   audio activity, not words. Use an explicit start when the user names a part.
+   Present the playable outputs and let the listener choose.
+6. Each local preview returns `full_mix_arguments` for the original narration.
+   Use those for the chosen track, with the requested output path or subsequent
+   changes. Do not accidentally export the temporary excerpt as the full mix.
 
-## Step 1: pick music for the content
+| Content | Good starting tracks | Stem cuts |
+|---|---|---|
+| Articles, tutorials, long explainers | rain, study, porch | lead |
+| Stories and personal essays | tape, nightbus | lead |
+| Food, travel and interviews | kettle | none |
+| Tech, science and analysis | drive, glass | lead |
+| News, updates and demos | warehouse, basement, tunnel | lead, arp |
+| Sports and light commentary | southside, pirate | lead |
+| Fast recaps | lowtide, slipstream | lead, hats |
+| Trailers and gaming | bricks, ravetape, acid | none |
 
-Read or skim what the voice is saying first. Then call `bckgrnd_list_tracks`
-and match on `good_for` and `energy`. The rules of thumb:
+For recordings over ten minutes, favor energy 1–2. Under dense speech, cut the
+lead melody. For sad or sensitive material, consider no music or very quiet Rain
+with `cut: ["kick", "clap", "lead"]`; ask if the listener's preference is unclear.
 
-| Content | Track | Energy | Cut |
-|---|---|---|---|
-| Long articles, explainers, how-tos | Rain, Study, Porch (Chillhop) | 1 | `lead` |
-| Stories, history, personal essays | Tape, Nightbus (Dusty) | 1 | `lead` |
-| Food, travel, culture, interviews | Kettle (Jazz) | 1 | nothing |
-| Tech, science, analysis | Night Drive, Glass (Deep) | 2 | `lead` |
-| News roundups, changelogs, demos | Warehouse, Basement, Tunnel (House) | 3 | `lead`, `arp` |
-| Sports, pop culture, light takes | Southside, Pirate (Garage) | 3 | `lead` |
-| Recaps, fast explainers | Lowtide, Slipstream (Liquid DnB) | 3 | `lead`, `hats` |
-| Trailers, hype, gaming | Bricks, Rave Tape, Acid Line | 4 | nothing |
-
-- **The longer the listen, the lower the energy.** Anything over ten minutes
-  should be energy 1 or 2, whatever the topic.
-- **Cut the `lead` under dense speech.** It's the hook melody, and a melody
-  competes with words. `pad` and `bass` are the stems that sit under a voice
-  best.
-- **Sad, serious or sensitive content** (loss, hard news) gets no
-  music, or Rain with `cut: ["kick", "clap", "lead"]` at `music_db: -22`. Ask
-  first if you're unsure.
-- If the user names a track or a mood, that wins over this table.
-
-## Step 2: set the level
-
-Levels are measured. The server measures the voice and the music in LUFS,
-brings the voice to `loudness_lufs`, and puts the music `music_db` LU under the
-voice. The same numbers give the same balance whether the voice file came in
-quiet or loud, so pick by content, not by the file.
+## Levels, ducking and arrangement
 
 | Situation | `music_db` |
 |---|---|
-| Dense, technical or fast reading | `-18` to `-22` |
-| Normal articles and narration (default) | `-14` |
-| Light content where the music is part of the feel | `-10` to `-12` |
-| Intro or outro with little talking | `-6` to `-8` |
+| Dense or technical speech | -18 to -22 |
+| Ordinary narration | -14 |
+| Light content with prominent music | -10 to -12 |
 
-| Where it's going | `loudness_lufs` |
+`loudness_lufs` sets the voice's level (default -16), while `music_db` puts the
+music that many LU below it. Both are based on measured input loudness.
+
+Keep `duck: true` unless a steady music bed is requested. Choose `ducking`:
+- `subtle`: gentle reduction and slower recovery for a smooth background.
+- `normal`: the original defaults.
+- `strong`: deeper reduction to give speech more space.
+
+For a longer synthesized bed, offer `arrangement: "evolving"`. It gradually
+changes instrument levels over successive 16-bar phrases while respecting
+`cut`. `arrangement: "loop"` preserves the original repeating arrangement.
+Evolving arrangements do not apply to a user's custom `music_path`.
+
+When a user requests a finished loudness target, set `final_lufs` and optionally
+`true_peak_dbfs` (default -1.5). This masters the complete export, separately
+from the voice target. Report the measured `output_lufs`,
+`output_true_peak_dbfs` and `mastering_target_met`; do not claim a target was
+met when the returned flag is false. These are user-selected targets, not a
+promise of platform certification.
+
+## Export audio or video
+
+For audio, call `bckgrnd_mix_under_voice`. Give a `voice_path` and either `track`
+or the user's `music_path`. The server renders music to the required length;
+do not render a separate bed first. Default audio output is
+`<voice>.with-<track>.mp3`; choose an absolute `.mp3` or `.wav` `output_path`.
+Audio defaults to a two-second lead-in and a three-second tail.
+
+For an actual video deliverable, use local `bckgrnd_mix_video` with `video_path`.
+It exports MP4, copies the picture without re-encoding and preserves narration
+synchronization. It ignores a preset's lead-in and tail to retain video timing.
+It mixes the first source audio stream, including any music already in it; it
+does not separate voices from existing music. Supported copied video codecs
+are H.264, HEVC, AV1 and MPEG-4. The output contains one picture and one mixed
+audio stream. Report unsupported inputs rather than promising arbitrary video
+conversion. Videos without narration need a different workflow.
+
+Local exports are limited to one hour. Existing outputs require
+`overwrite: true`; choose a new path unless replacing the previous result is
+part of the user's request. Input files cannot be overwritten.
+
+Use `bckgrnd_render_track` only when the user wants standalone music.
+
+## Favorite settings
+
+When asked to remember a preferred mix, use local `bckgrnd_presets`:
+- `action: "save"`, a lowercase hyphenated `name`, and `settings` containing
+  the chosen track, levels, ducking, cuts, arrangement and intro/outro/mastering.
+- `action: "list"` or `"get"` to find existing settings.
+- Pass `preset: "my-podcast"` to audio, preview or video tools. Explicit
+  arguments override saved values. Video always retains its original timing.
+- Replacing a saved preset requires `overwrite: true`; delete only when asked.
+
+Presets are local files. They do not store narration or output paths and are
+not available on the public hosted server. Do not save preferences implicitly
+just because a listener accepted one mix.
+
+## Adjust and deliver
+
+| Listener feedback | Adjustment |
 |---|---|
-| Podcasts, spoken word, most players (default) | `-16` |
-| Phone speakers, noisy places | `-14` |
-| Quiet listening, or matching a library mastered quieter | `-19` |
+| Music too loud / words unclear | decrease `music_db` by 4 |
+| Music too quiet | increase `music_db` by 4 |
+| Melody distracting | cut lead, then arp |
+| Music swells between phrases | try subtle ducking; disable duck only for a steady bed |
+| Too busy | lower energy or cut hats/clap |
+| Whole export too quiet | raise requested voice or final loudness target by 2 |
 
-Leave `duck: true` (the default). It turns the music down further while the
-voice talks and lets it come back between paragraphs. Turn it off only when
-the user wants a steady bed.
-
-## Preview before a full mix
-
-When the listener wants to compare tracks and the local server offers
-`bckgrnd_preview_tracks`, pass the narration path, two candidate track ids,
-`seconds: 20`, and the same level/stem settings. Present the two output files
-and let the listener choose. Do not render an entire narration just to compare.
-The hosted server currently has no comparison tool.
-
-## Step 3: mix
-
-```json
-{
-  "voice_path": "/abs/path/article.mp3",
-  "track": "study",
-  "cut": ["lead"],
-  "music_db": -14
-}
-```
-
-The result lands next to the voice as `<voice>.with-<track>.mp3` unless you
-give `output_path`. Paths must be absolute. Existing files are never replaced
-unless you pass `overwrite: true`.
-
-Report back in a short table: track, why it fits, `music_db`, the measured
-`voice_lufs`, final `output_lufs`/`output_true_peak_dbfs`, and the output path.
-
-## Step 4: adjust by ear
-
-The user's ear outranks every number here. Map what they say to one change:
-
-| They say | Change |
-|---|---|
-| "Can't hear the words" / "music's too loud" | `music_db` down 4 |
-| "Can't hear the music" | `music_db` up 4 |
-| "The melody's distracting" | add `lead` (then `arp`) to `cut` |
-| "Too busy" / "too much going on" | lower energy track, or cut `hats` and `clap` |
-| "Too sleepy" | one energy step up |
-| "The whole thing's too quiet" | `loudness_lufs` up 2 |
-
-Re-run with `overwrite: true` and the same `output_path`.
+Stay within tool ranges. Reuse the previous output with `overwrite: true` when
+the user asks to replace that mix. Deliver the playable file or video, track,
+brief reason, music level and measured export loudness. Mention an unmet
+mastering target when applicable.

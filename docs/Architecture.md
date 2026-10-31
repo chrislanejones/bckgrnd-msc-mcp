@@ -59,7 +59,29 @@ length, so your own music file can be shorter than the voice.
 ## Why TypeScript and not a Rust server
 
 A Rust MCP server would be faster and ship as one file. It would also need a
-separate build for every system and wouldn't install with `npx`, which is the
+separate build for every system and wouldn't install with `pnpm dlx`, which is the
 line every MCP client's setup docs show. The engine is already Rust; the server
 around it is mostly plumbing. The full reasoning is in
 [ADR-001](adr/001-typescript-server-over-vendored-wasm.md).
+
+## Shared workflows and optional finishing
+
+`workflow.ts` resolves saved settings and explicit overrides before rendering,
+measuring and mixing. Previews use the same path on a selected audible excerpt.
+A preset stores settings in one atomically published JSON file; audio paths are
+never saved. Local and hosted schemas share enums and workflow behavior, while
+the hosted adapter accepts only bounded audio uploads and never local paths.
+
+Evolving renders smoothly automate the existing engine's stem volumes over a
+four-phrase arc. They preserve the original track's mixer balance and cut stems.
+
+Optional mastering first mixes to temporary PCM, measures with `loudnorm`, then
+encodes with a measured second pass. Encoded loudness and true peak are checked;
+at most three encodes correct deviations. A peak ceiling that cannot be met
+fails before publishing the output; loudness success is reported explicitly.
+
+Video exports extract the first audio stream with its original offset relative
+to the picture, mix for exactly the video duration, encode AAC, and remux it with
+the copied video stream. Preset intro/outro is ignored for video. The final MP4
+is measured before the atomic output is published. The limiter compensates its
+lookahead delay so narration remains aligned.

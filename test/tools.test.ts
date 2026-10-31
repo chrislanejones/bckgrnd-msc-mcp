@@ -53,11 +53,14 @@ const hasFfmpeg = (() => {
 })();
 
 describe('the tool list', () => {
-  it('offers the four tools', async () => {
+  it('offers the seven tools', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      'bckgrnd_check_setup',
       'bckgrnd_list_tracks',
       'bckgrnd_mix_under_voice',
+      'bckgrnd_mix_video',
+      'bckgrnd_presets',
       'bckgrnd_preview_tracks',
       'bckgrnd_render_track',
     ]);

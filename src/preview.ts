@@ -1,73 +1,84 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { findTrack, STEMS, unknownTrackMessage } from './library.js';
+import { findTrack, unknownTrackMessage } from './library.js';
 import { defaultOutDir } from './paths.js';
-import { durationSeconds, extractPreview } from './mix.js';
-import { toolJob } from './jobs.js';
+import { durationSeconds, extractPreview, loudnessLufs, tool, SILENCE_LUFS } from './mix.js';
+import { toolJob, type JobOptions } from './jobs.js';
+import { mixNarration } from './workflow.js';
+import { mixSettingsShape, presetNameSchema, type MixSettings } from './settings.js';
+import { resolveSettings } from './presets.js';
+
+export const contentSchema = z.enum(['narration', 'tutorial', 'story', 'tech', 'news', 'hype']);
+export function recommendTracks(content: z.infer<typeof contentSchema>, duration: number): string[] {
+  if (duration > 600) return ['rain', 'study'];
+  return { narration: ['rain', 'study'], tutorial: ['study', 'porch'], story: ['tape', 'nightbus'], tech: ['drive', 'glass'], news: ['warehouse', 'basement'], hype: ['bricks', 'ravetape'] }[content];
+}
+
+/** Select the window with most audible material. This detects activity, not words. */
+export async function chooseExcerpt(path: string, duration: number, seconds: number, job: JobOptions = {}): Promise<number> {
+  const lufs = await loudnessLufs(path, job);
+  if (lufs <= SILENCE_LUFS) throw new Error('Narration is silent. Choose a recording containing speech.');
+  const { stderr } = await tool(process.env.FFMPEG_PATH || 'ffmpeg', ['-hide_banner', '-nostats', '-nostdin', '-i', path, '-map', '0:a:0', '-af', `volume=${-20 - lufs}dB,silencedetect=n=-40dB:d=0.35`, '-f', 'null', '-'], job);
+  const spans: Array<[number, number]> = [];
+  let cursor = 0;
+  for (const match of stderr.matchAll(/silence_(start|end):\s*([\d.]+)/g)) {
+    const time = Math.min(duration, Number(match[2]));
+    if (match[1] === 'start' && time > cursor) spans.push([cursor, time]);
+    cursor = time;
+  }
+  if (cursor < duration - 0.01) spans.push([cursor, duration]);
+  if (!spans.length) return 0;
+  const candidates = [0, ...spans.flatMap(([start, end]) => [start - 0.2, end - seconds])].map((t) => Math.max(0, Math.min(duration - seconds, t)));
+  let best = 0, bestScore = -1;
+  for (const start of candidates) {
+    const score = spans.reduce((sum, [a, b]) => sum + Math.max(0, Math.min(start + seconds, b) - Math.max(start, a)), 0);
+    if (score > bestScore + 0.001) { best = start; bestScore = score; }
+  }
+  return Math.round(best * 1000) / 1000;
+}
 
 export function registerPreview(server: McpServer): void {
+  const { track: _track, lead_in_seconds: _lead, tail_seconds: _tail, ...settings } = mixSettingsShape;
+  void _track; void _lead; void _tail;
   server.registerTool('bckgrnd_preview_tracks', {
     title: 'Compare music under a narration excerpt',
-    description: 'Compare one to three tracks under the same 15–30 second narration excerpt before committing to a full mix. Returns separate MP3 paths and measured levels. Use start_seconds to select the excerpt.',
+    description: 'Compare 1–3 tracks on the same 15–30 second excerpt. Omit tracks for two recommendations based on content; omit start_seconds to choose an audible section automatically. Returns playable MP3 paths and ready-to-use full-mix arguments. Present previews and use the listener’s choice for export. Presets and explicit settings are supported; previews have no intro and a one-second tail.',
     inputSchema: {
-      voice_path: z.string().min(1),
-      tracks: z.array(z.string().min(1)).min(1).max(3),
-      seconds: z.number().min(15).max(30).default(20),
-      start_seconds: z.number().min(0).default(0),
-      cut: z.array(z.enum(STEMS)).optional(),
-      music_db: z.number().min(-40).max(0).default(-14),
-      loudness_lufs: z.number().min(-30).max(-9).default(-16),
+      ...settings, preset: presetNameSchema.optional(), voice_path: z.string().min(1),
+      tracks: z.array(z.string().min(1)).min(1).max(3).optional(), content: contentSchema.default('narration'),
+      seconds: z.number().min(15).max(30).default(20), start_seconds: z.number().min(0).optional(),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  }, async (args, extra): Promise<CallToolResult> => {
+  }, async (args, extra) => {
     const job = toolJob(extra);
-    let scratch: string | undefined;
-    let outDir: string | undefined;
+    let scratch: string | undefined, outDir: string | undefined;
     let complete = false;
-    let client: Client | undefined;
-    let internal: McpServer | undefined;
     try {
       if (!isAbsolute(args.voice_path)) throw new Error('voice_path must be absolute.');
-      for (const name of args.tracks) if (!findTrack(name)) throw new Error(unknownTrackMessage(name));
       const duration = await durationSeconds(args.voice_path, job);
-      if (args.start_seconds >= duration) throw new Error('start_seconds must be before the end of the narration.');
+      if (duration > 3600) throw new Error('Local previews support narration up to 3600 seconds.');
+      const resolved: MixSettings = resolveSettings(args);
+      const tracks = args.tracks ?? (resolved.track ? [resolved.track, ...recommendTracks(args.content, duration).filter((id) => id !== findTrack(resolved.track!)?.id)].slice(0, 2) : recommendTracks(args.content, duration));
+      for (const name of tracks) if (!findTrack(name)) throw new Error(unknownTrackMessage(name));
+      const start = args.start_seconds ?? await chooseExcerpt(args.voice_path, duration, args.seconds, job);
+      if (start >= duration) throw new Error('start_seconds must be before the end of the narration.');
       scratch = mkdtempSync(join(tmpdir(), 'bckgrnd-preview-'));
       outDir = mkdtempSync(join(defaultOutDir(), 'previews-'));
       const excerpt = join(scratch, 'excerpt.wav');
-      await extractPreview(args.voice_path, excerpt, args.start_seconds, args.seconds, job);
-      const { createServer } = await import('./server.js');
-      internal = createServer();
-      client = new Client({ name: 'preview', version: '1' });
-      const [a, b] = InMemoryTransport.createLinkedPair();
-      await internal.connect(b);
-      await client.connect(a);
-      const previews: Record<string, unknown>[] = [];
-      for (const [i, track] of args.tracks.entries()) {
-        job.signal?.throwIfAborted();
-        const result = await client.callTool({ name: 'bckgrnd_mix_under_voice', arguments: {
-          voice_path: excerpt, track, cut: args.cut, music_db: args.music_db,
-          loudness_lufs: args.loudness_lufs, lead_in_seconds: 0, tail_seconds: 1,
+      await extractPreview(args.voice_path, excerpt, start, args.seconds, job);
+      const previews = [];
+      for (const [i, track] of tracks.entries()) {
+        const mix = await mixNarration({ ...resolved, voice_path: excerpt, track, lead_in_seconds: 0, tail_seconds: 1,
           output_path: join(outDir, `${i + 1}-${findTrack(track)!.id}.mp3`),
-        } }, undefined, { signal: job.signal, timeout: 180_000, onprogress: (p) => { void job.onProgress?.((i * 100 + p.progress) / args.tracks.length, `Preview ${i + 1}: ${p.message ?? track}`).catch(() => {}); } });
-        if (result.isError) throw new Error((result.content as Array<{ text?: string }>)[0]?.text ?? 'Preview mix failed.');
-        previews.push(result.structuredContent as Record<string, unknown>);
+        }, { ...job, onProgress: async (p, message) => job.onProgress?.((i * 100 + p) / tracks.length, `Preview ${i + 1}: ${message}`) });
+        previews.push({ ...mix, track: findTrack(track)!.id, full_mix_arguments: { ...resolved, voice_path: args.voice_path, track: findTrack(track)!.id } });
       }
-      await job.onProgress?.(100, 'Previews complete');
       complete = true;
-      return { content: [{ type: 'text', text: previews.map((p) => `${p.music}: ${p.path}`).join('\n') }], structuredContent: { previews, start_seconds: args.start_seconds } };
-    } catch (cause) {
-      return { isError: true, content: [{ type: 'text', text: cause instanceof Error ? cause.message : String(cause) }] };
-    } finally {
-      await client?.close();
-      await internal?.close();
-      if (scratch) rmSync(scratch, { recursive: true, force: true });
-      if (!complete && outDir) rmSync(outDir, { recursive: true, force: true });
-    }
+      return { content: [{ type: 'text', text: previews.map((p) => `${p.music}: ${p.path}`).join('\n') }], structuredContent: { previews, start_seconds: start, excerpt_seconds: Math.min(args.seconds, duration - start), selection: args.start_seconds === undefined ? 'automatic audio activity' : 'explicit' } };
+    } catch (error) { return { isError: true, content: [{ type: 'text', text: (error as Error).message }] }; }
+    finally { if (scratch) rmSync(scratch, { recursive: true, force: true }); if (!complete && outDir) rmSync(outDir, { recursive: true, force: true }); }
   });
 }

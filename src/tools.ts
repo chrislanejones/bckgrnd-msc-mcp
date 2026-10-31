@@ -1,13 +1,12 @@
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { toolJob } from './jobs.js';
-import { tmpdir } from 'node:os';
-import { basename, dirname, extname, join, isAbsolute } from 'node:path';
+import { basename, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { findTrack, listTracks, STEMS, unknownTrackMessage } from './library.js';
-import { durationSeconds, levelsFor, loudnessLufs, mixUnderVoice, SILENCE_LUFS } from './mix.js';
+import { mixNarration, mixInputSchema } from './workflow.js';
+import { arrangementSchema } from './settings.js';
 import { defaultOutDir, outputProblem } from './paths.js';
 import { renderTrack } from './render.js';
 
@@ -96,6 +95,7 @@ Use bckgrnd_mix_under_voice instead when the music is going under a narration; i
       inputSchema: {
         track: z.string().min(1).describe('Track id or name, e.g. "rain"'),
         seconds: z.number().min(1).max(MAX_SECONDS).describe('Length of the WAV in seconds'),
+        arrangement: arrangementSchema.default('loop'),
         cut: z.array(z.enum(STEMS)).optional().describe('Stems to silence for the whole take'),
         fade_in_seconds: z.number().min(0).max(30).default(1).describe('Fade-in length'),
         fade_out_seconds: z.number().min(0).max(60).default(4).describe('Fade-out length'),
@@ -111,6 +111,7 @@ Use bckgrnd_mix_under_voice instead when the music is going under a narration; i
         cut: z.array(z.string()),
         peak_dbfs: z.number(),
         render_ms: z.number(),
+        arrangement: arrangementSchema,
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
@@ -129,6 +130,7 @@ Use bckgrnd_mix_under_voice instead when the music is going under a narration; i
           seconds: args.seconds,
           outputPath,
           cut: args.cut,
+          arrangement: args.arrangement,
           fadeInSeconds: args.fade_in_seconds,
           fadeOutSeconds: args.fade_out_seconds,
           overwrite: args.overwrite,
@@ -153,7 +155,7 @@ Use bckgrnd_mix_under_voice instead when the music is going under a narration; i
 
 Levels are measured, not guessed: both files are measured in LUFS, the voice is brought to loudness_lufs, and the music is set music_db LU below the voice. The same settings give the same balance whether the voice file is quiet or hot.
 
-Give exactly one of:
+Supports saved preset settings, ducking strength (subtle/normal/strong), evolving arrangements, and optional final_lufs/true_peak_dbfs mastering. Explicit arguments override saved settings.\n\nGive exactly one of:
   - track (string): a bckgrnd-msc track id or name. It's rendered to the right length automatically. Pick one with bckgrnd_list_tracks to suit the content.
   - music_path (string): an absolute path to your own music file. It loops if it's shorter than the voice.
 
@@ -168,19 +170,7 @@ Args:
   - overwrite (boolean, default false)
 
 Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, voice_lufs, music_lufs, voice_gain_db, music_gain_db, duck, output_lufs, output_true_peak_dbfs }`,
-      inputSchema: {
-        voice_path: z.string().min(1).describe('Absolute path to the narration audio'),
-        track: z.string().optional().describe('bckgrnd-msc track id or name, e.g. "rain"'),
-        music_path: z.string().optional().describe('Absolute path to your own music file instead of a track'),
-        music_db: z.number().min(-40).max(0).default(-14).describe('Music loudness relative to the voice, in LU'),
-        loudness_lufs: z.number().min(-30).max(-9).default(-16).describe('Loudness of the voice in the result, in LUFS'),
-        duck: z.boolean().default(true).describe('Dip the music while the voice talks'),
-        cut: z.array(z.enum(STEMS)).optional().describe('Stems to silence when rendering a track'),
-        lead_in_seconds: z.number().min(0).max(30).default(2).describe('Music before the voice starts'),
-        tail_seconds: z.number().min(0).max(30).default(3).describe('Music after the voice ends, fading out'),
-        output_path: z.string().optional().describe('Absolute path ending in .mp3 or .wav'),
-        overwrite: z.boolean().default(false).describe('Replace output_path if it already exists'),
-      },
+      inputSchema: mixInputSchema.shape,
       outputSchema: {
         path: z.string(),
         output_lufs: z.number(),
@@ -195,86 +185,23 @@ Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, v
         voice_gain_db: z.number(),
         music_gain_db: z.number(),
         duck: z.boolean(),
+        ducking: z.enum(['subtle', 'normal', 'strong']),
+        arrangement: arrangementSchema,
+        cut: z.array(z.string()),
+        lead_in_seconds: z.number(),
+        tail_seconds: z.number(),
+        preset: z.string().optional(),
+        final_lufs: z.number().optional(),
+        true_peak_dbfs: z.number().optional(),
+        mastering_target_met: z.boolean().optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
     async (args, extra) => {
-      const job = toolJob(extra);
-      if (Boolean(args.track) === Boolean(args.music_path)) {
-        return fail('Give exactly one of track or music_path.');
-      }
-      if (!isAbsolute(args.voice_path) || (args.music_path && !isAbsolute(args.music_path))) return fail('Input paths must be absolute.');
-      if (!existsSync(args.voice_path)) return fail(`voice_path not found: ${args.voice_path}`);
-      if (args.music_path && !existsSync(args.music_path)) return fail(`music_path not found: ${args.music_path}`);
-      const track = args.track ? findTrack(args.track) : undefined;
-      if (args.track && !track) return fail(unknownTrackMessage(args.track));
-
-      const musicName = track ? track.id : basename(args.music_path!, extname(args.music_path!));
-      const outputPath =
-        args.output_path ??
-        join(dirname(args.voice_path), `${basename(args.voice_path, extname(args.voice_path))}.with-${musicName}.mp3`);
-      const problem = outputProblem(outputPath, ['.mp3', '.wav'], args.overwrite);
-      if (problem) return fail(problem);
-
-      let scratch: string | null = null;
       try {
-        const voiceSeconds = await durationSeconds(args.voice_path, job);
-        const totalSeconds = args.lead_in_seconds + voiceSeconds + args.tail_seconds;
-        if (totalSeconds > MAX_SECONDS) {
-          return fail(`The voice is ${Math.round(voiceSeconds)} s; the limit with lead-in and tail is ${MAX_SECONDS} s.`);
-        }
-
-        let musicPath = args.music_path!;
-        if (track) {
-          scratch = mkdtempSync(join(tmpdir(), 'bckgrnd-mix-'));
-          musicPath = join(scratch, `${track.id}.wav`);
-          // The fade-out is ffmpeg's job here, timed against the voice.
-          await renderTrack({ ...job, onProgress: async (p, message) => job.onProgress?.(p * 0.6, message), track, seconds: totalSeconds, outputPath: musicPath, cut: args.cut, fadeInSeconds: 1, fadeOutSeconds: 0 });
-        }
-
-        await job.onProgress?.(65, 'Measuring voice and music');
-        const [voiceLufs, musicLufs] = await Promise.all([loudnessLufs(args.voice_path, job), loudnessLufs(musicPath, job)]);
-        if (voiceLufs <= SILENCE_LUFS) return fail(`${args.voice_path} is silent, so there's no level to match the music to.`);
-        const levels = levelsFor(voiceLufs, musicLufs, args.loudness_lufs, args.music_db);
-
-        await job.onProgress?.(80, 'Mixing narration and music');
-        const measured = await mixUnderVoice({
-          ...job,
-          voicePath: args.voice_path,
-          musicPath,
-          outputPath,
-          totalSeconds,
-          leadInSeconds: args.lead_in_seconds,
-          tailSeconds: args.tail_seconds,
-          ...levels,
-          duck: args.duck,
-          overwrite: args.overwrite,
-        });
-
-        await job.onProgress?.(100, 'Mix complete');
-        const result = {
-          ...measured,
-          path: outputPath,
-          voice_seconds: Math.round(voiceSeconds * 10) / 10,
-          total_seconds: Math.round(totalSeconds * 10) / 10,
-          music: track ? track.name : args.music_path!,
-          music_db: args.music_db,
-          loudness_lufs: args.loudness_lufs,
-          voice_lufs: voiceLufs,
-          music_lufs: musicLufs,
-          voice_gain_db: levels.voiceGainDb,
-          music_gain_db: levels.musicGainDb,
-          duck: args.duck,
-        };
-        return ok(
-          `Mixed ${result.music} under ${basename(args.voice_path)}: voice ${voiceLufs} → ${args.loudness_lufs} LUFS, music ${args.music_db} LU under it${result.duck ? ', ducking while the voice talks' : ''}. ${result.total_seconds} s total.\n${result.path}`,
-          result,
-        );
-      } catch (error) {
-        return fail(errorText(error));
-      } finally {
-        if (scratch) rmSync(scratch, { recursive: true, force: true });
-      }
+        const result = await mixNarration(args, toolJob(extra));
+        return ok(`Mixed ${result.music} under ${basename(args.voice_path)}. ${result.total_seconds} s, ${result.output_lufs} LUFS.${result.mastering_target_met === false ? ' The final loudness target was not reached; inspect the measured result.' : ''}\n${result.path}`, result);
+      } catch (error) { return fail(errorText(error)); }
     },
   );
 }

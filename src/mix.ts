@@ -16,9 +16,12 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { atomicOutput } from './paths.js';
 import type { JobOptions } from './jobs.js';
+import type { MixSettings } from './settings.js';
 
 const run = promisify(execFile);
 
@@ -34,7 +37,7 @@ export const SILENCE_LUFS = -70;
 
 export class MissingFfmpegError extends Error {}
 
-async function tool(cmd: string, args: string[], job: JobOptions = {}): Promise<{ stdout: string; stderr: string }> {
+export async function tool(cmd: string, args: string[], job: JobOptions = {}): Promise<{ stdout: string; stderr: string }> {
   try {
     return await run(cmd, args, { maxBuffer: 4 * 1024 * 1024, timeout: 120_000, signal: job.signal, killSignal: 'SIGKILL' });
   } catch (error) {
@@ -59,7 +62,7 @@ export async function durationSeconds(path: string, job: JobOptions = {}): Promi
 
 /** Integrated loudness of a file, in LUFS. */
 export async function loudnessLufs(path: string, job: JobOptions = {}): Promise<number> {
-  const { stderr } = await tool(ffmpeg(), ['-hide_banner', '-nostats', '-nostdin', '-i', path, '-af', 'ebur128=framelog=quiet', '-f', 'null', '-'], job);
+  const { stderr } = await tool(ffmpeg(), ['-hide_banner', '-nostats', '-nostdin', '-i', path, '-map', '0:a:0', '-af', 'aformat=channel_layouts=stereo,ebur128=framelog=quiet', '-f', 'null', '-'], job);
   const lufs = parseIntegratedLoudness(stderr);
   if (lufs === null) throw new Error(`Couldn't measure the loudness of ${path}.`);
   return lufs;
@@ -100,9 +103,12 @@ export interface MixOptions extends Levels, JobOptions {
   tailSeconds: number;
   duck: boolean;
   overwrite: boolean;
+  ducking?: MixSettings['ducking'];
+  finalLufs?: number;
+  truePeakDbfs?: number;
 }
 
-type GraphOptions = Pick<MixOptions, 'totalSeconds' | 'leadInSeconds' | 'tailSeconds' | 'voiceGainDb' | 'musicGainDb' | 'duck'>;
+type GraphOptions = Pick<MixOptions, 'totalSeconds' | 'leadInSeconds' | 'tailSeconds' | 'voiceGainDb' | 'musicGainDb' | 'duck' | 'ducking'>;
 
 /** The `-filter_complex` graph. Exported so the tests can pin it. */
 export function mixGraph(o: GraphOptions): string {
@@ -110,17 +116,22 @@ export function mixGraph(o: GraphOptions): string {
   const fadeStart = Math.max(0, o.totalSeconds - o.tailSeconds).toFixed(3);
   const fadeDur = Math.max(0.01, o.tailSeconds).toFixed(3);
   const fmt = 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo';
-  const voice = `[0:a]${fmt},volume=${o.voiceGainDb}dB,adelay=delays=${leadMs}:all=1,apad[v]`;
-  const bed = `[1:a]${fmt},volume=${o.musicGainDb}dB,afade=t=out:st=${fadeStart}:d=${fadeDur}[m]`;
+  const voice = `[0:a:0]${fmt},volume=${o.voiceGainDb}dB,adelay=delays=${leadMs}:all=1,apad[v]`;
+  const bed = `[1:a:0]${fmt},volume=${o.musicGainDb}dB,afade=t=out:st=${fadeStart}:d=${fadeDur}[m]`;
   // The limiter only catches the odd peak the gain pushed over; levels come from the gains.
-  const out = `amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.95:level=0[out]`;
+  const out = `amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.95:level=0:latency=1[out]`;
   if (!o.duck) return [voice, bed, `[v][m]${out}`].join(';');
+  const compressor = {
+    subtle: 'threshold=0.035:ratio=2:attack=60:release=1200',
+    normal: 'threshold=0.02:ratio=6:attack=30:release=600',
+    strong: 'threshold=0.012:ratio=10:attack=15:release=900',
+  }[o.ducking ?? 'normal'];
   return [
     voice,
     `[v]asplit=2[vkey][vout]`,
     bed,
     // With the voice at its target, this threshold sits under speech and over room tone.
-    `[m][vkey]sidechaincompress=threshold=0.02:ratio=6:attack=30:release=600[md]`,
+    `[m][vkey]sidechaincompress=${compressor}[md]`,
     `[vout][md]${out}`,
   ].join(';');
 }
@@ -128,10 +139,43 @@ export function mixGraph(o: GraphOptions): string {
 export async function mixUnderVoice(o: MixOptions): Promise<AudioMeasurements> {
   if ([o.voicePath, o.musicPath].some((p) => resolve(p) === resolve(o.outputPath))) throw new Error('Output must differ from input files.');
   return atomicOutput(o.outputPath, o.overwrite, async (temporary) => {
-    await mixToFile({ ...o, outputPath: temporary });
+    if (o.finalLufs === undefined) await mixToFile({ ...o, outputPath: temporary });
+    else {
+      const scratch = mkdtempSync(join(tmpdir(), 'bckgrnd-master-'));
+      try {
+        const raw = join(scratch, 'mix.wav');
+        await mixToFile({ ...o, outputPath: raw });
+        await o.onProgress?.(85, 'Mastering finished mix');
+        await masterAudio(raw, temporary, o.finalLufs, o.truePeakDbfs ?? -1.5, o);
+      } finally { rmSync(scratch, { recursive: true, force: true }); }
+    }
     await o.onProgress?.(90, 'Measuring finished audio');
     return measureAudio(temporary, o);
   }, o);
+}
+
+/** Two-pass normalization of the complete mix, with headroom for lossy encoding. */
+export async function masterAudio(input: string, output: string, target: number, peak: number, job: JobOptions = {}, codec?: string[]): Promise<void> {
+  const encoding = codec ?? (output.toLowerCase().endsWith('.wav') ? ['-c:a', 'pcm_s16le'] : ['-c:a', 'libmp3lame', '-q:a', '2']);
+  const { stderr } = await tool(ffmpeg(), ['-hide_banner', '-nostats', '-nostdin', '-i', input, '-map', '0:a:0', '-af', `loudnorm=I=${target}:TP=${peak}:LRA=50:print_format=json`, '-f', 'null', '-'], job);
+  const json = stderr.match(/\{\s*"input_i"[\s\S]*?\}/)?.[0];
+  if (!json) throw new Error('Could not measure the mix for mastering.');
+  const stats = JSON.parse(json) as Record<string, string>;
+  for (const key of ['input_i', 'input_tp', 'input_lra', 'input_thresh', 'target_offset']) {
+    if (!Number.isFinite(Number(stats[key]))) throw new Error('Cannot master silent or invalid audio.');
+  }
+  let ceiling = Math.max(-9, peak - 0.3);
+  let normalizationTarget = target;
+  let measured: AudioMeasurements | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const filter = `loudnorm=I=${normalizationTarget}:TP=${ceiling}:LRA=50:measured_I=${stats.input_i}:measured_TP=${stats.input_tp}:measured_LRA=${stats.input_lra}:measured_thresh=${stats.input_thresh}:offset=${stats.target_offset}:linear=true`;
+    await tool(ffmpeg(), ['-v', 'error', '-nostdin', '-y', '-i', input, '-map', '0:a:0', '-af', filter, '-ar', '48000', ...encoding, output], job);
+    measured = await measureAudio(output, job);
+    if (measured.output_true_peak_dbfs <= peak + 0.05 && Math.abs(measured.output_lufs - target) <= 0.3) return;
+    normalizationTarget = Math.max(-70, Math.min(-5, normalizationTarget + target - measured.output_lufs));
+    if (measured.output_true_peak_dbfs > peak + 0.05) ceiling = Math.max(-9, ceiling - (measured.output_true_peak_dbfs - peak) - 0.3);
+  }
+  if (measured!.output_true_peak_dbfs > peak + 0.05) throw new Error('Could not meet the requested encoded true-peak ceiling. Try a lower final_lufs target.');
 }
 
 async function mixToFile(o: MixOptions): Promise<void> {

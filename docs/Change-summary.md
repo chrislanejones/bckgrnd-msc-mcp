@@ -1,5 +1,17 @@
 # Change Summary
 
+## v0.3.0: 10-31-2026
+
+- Automatic audible-excerpt selection and two track recommendations, with full-export arguments returned by local previews.
+- Hosted previews return labeled MP3 attachments; uploaded audio remains bounded by the existing limits.
+- Persistent named local presets with explicit argument overrides and protected replacement.
+- Subtle, normal and strong ducking. Existing calls retain normal ducking.
+- MP4 exports copy supported video streams, retain source audio offsets and duration, and compensate limiter latency.
+- Optional evolving arrangements smoothly vary stem levels over 16-bar phrases without re-enabling cut stems.
+- Two-pass final-mix loudness mastering with encoded-output verification and bounded corrections for MP3/AAC peaks and loudness.
+- CLI `--check` / `doctor` and MCP setup diagnostics test dependencies, output access and the WASM engine.
+- Updated Claude/Codex companion skill, installation instructions, workflow examples and package verification.
+
 ## 2026-10-21 — Companion skill rename
 
 - Renamed the companion skill from `bckgrnd-music` to `background-music` and updated installation commands and documentation links.

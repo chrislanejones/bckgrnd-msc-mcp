@@ -18,7 +18,7 @@ in-memory transport, the same way a client would. Nothing is mocked.
 
 | Group | What it checks |
 |---|---|
-| Tool list | The four local tools are there |
+| Tool list | The seven local tools are there |
 | `bckgrnd_list_tracks` | 18 tracks, 8 stems, every track has a mood, the filters |
 | `bckgrnd_render_track` | Real WAV, right length, has sound, silent with every stem cut, fades to nothing, refuses bad paths and existing files |
 | Levels | The gain math, silent music left alone, reading ffmpeg's loudness summary |
@@ -26,6 +26,11 @@ in-memory transport, the same way a client would. Nothing is mocked.
 | `bckgrnd_mix_under_voice` | A real mix comes out the right length. A quiet voice and a loud voice end up within 1.5 LU of the same target |
 
 The original mix tests skip without ffmpeg, but reliability and package tests require it.
+
+`test/features.test.ts` checks saved settings across connections, overrides,
+automatic excerpts, real ducking differences, evolving renders, mastered WAV/MP3,
+video frame identity and narration synchronization (including source offsets),
+and setup failure diagnostics. HTTP tests also verify hosted previews/mastering.
 
 ## Trying it in a client
 
@@ -43,7 +48,8 @@ Rebuild after every change. The client runs `dist/`, not `src/`.
 pnpm run typecheck && pnpm run lint && pnpm test
 pnpm version patch --no-git-tag-version   # or minor
 pnpm publish --access public
-git push --follow-tags
+git tag v<version>
+git push origin main --follow-tags
 ```
 
 Add the release to [Change Summary](Change-summary.md) and the README first.
@@ -61,3 +67,19 @@ GitHub Actions runs the checks on Node 22 and 24, including Vercel asset staging
 HTTP tests exercise stateless MCP requests and uploaded audio with bundled
 binaries. Reliability tests cover racing writes, cancellation, exported audio,
 previews and real synthesized speech followed by silence.
+
+## Skill release verification
+
+The canonical skill is `skills/background-music/SKILL.md`, with supporting
+references included beside it. Bump its package pin with the server release.
+Push the source to the public default branch, then perform one real installation
+with the skills CLI in a clean directory and compare the downloaded files.
+skills.sh discovers skills from public repositories and installation telemetry;
+its cached page may refresh after the GitHub source. Verify both installation
+and the public [listing](https://skills.sh/chrislanejones/bckgrnd-msc-mcp/background-music).
+
+After production deployment, run `pnpm run test:hosted`. It verifies the deployed
+version, four HTTP tools, the 18-track library, decodable audio, final mastering
+and two hosted previews using only the repository's synthetic speech fixture.
+An alternate endpoint may be passed as the first argument. This check makes
+real requests and is intentionally separate from local prepublication checks.

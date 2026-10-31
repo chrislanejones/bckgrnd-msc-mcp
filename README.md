@@ -17,10 +17,10 @@ machine when you ask for it.
 Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
-Use the local server by default, pinned to version 0.2.0:
+Use the local server by default, pinned to version 0.3.0:
 
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
 pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music
 ```
 
@@ -43,11 +43,29 @@ suits which content, where to set the level, and what to change when the listene
 says "I can't hear the words." Other clients, settings and running from a clone →
 **[Getting Started](docs/Getting-Started.md)**.
 
+## Preview, remember and export
+
+Ask your agent:
+
+- "Compare two gentle tracks under this tutorial before mixing the whole file."
+- "Save these as my podcast settings; use subtle ducking and an evolving arrangement."
+- "Add music to this screen recording and keep the video synchronized."
+- "Master the finished export to -18 LUFS with a -2 dBTP ceiling."
+
+Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.0 --check`.
+Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0`.
+
+[Workflow examples](docs/Workflows.md) cover previews, presets, video exports
+and mastering. All seven tools run locally. Hosted processing adds previews,
+ducking controls, arrangements and mastering for short uploaded audio; saved
+presets, video and setup diagnostics stay local.
+
 ## Documentation
 
 - **[Vercel hosting](docs/Vercel.md)**: remote MCP endpoint, audio uploads and hosted clip limits.
 - **[Getting Started](docs/Getting-Started.md)**: install it in Claude Code, Claude Desktop or any client, add the skill, the settings.
 - **[Tools](docs/Tools.md)**: the local and hosted tools, every argument, what comes back, and what the errors mean.
+- **[Workflows](docs/Workflows.md)**: compare music, save favorites, export video and master final loudness.
 - **[Levels](docs/Levels.md)**: how the music level is set by measured loudness, the ducking, and which numbers to pick for which content.
 - **[Tracks](docs/Tracks.md)**: the eighteen tracks and eight stems, their moods and energy, and matching music to content.
 - **[Architecture](docs/Architecture.md)**: one engine in two places, streaming to disk, and the ffmpeg mix step by step.
@@ -70,8 +88,11 @@ decided, what was turned down, and what would make it the wrong call later.
 |---|---|
 | `bckgrnd_list_tracks` | The eighteen tracks, with bpm, mood, energy (1 to 5) and what each one suits |
 | `bckgrnd_render_track` | One track to a 48 kHz stereo WAV of any length, up to an hour. Cut any stems, set the fades |
-| `bckgrnd_preview_tracks` | Compare up to three tracks under the same short narration excerpt (local server) |
-| `bckgrnd_mix_under_voice` | A voice file plus a track, or your own music file, to one MP3 or WAV |
+| `bckgrnd_preview_tracks` | Automatically select an audible excerpt and compare up to three tracks locally or hosted |
+| `bckgrnd_mix_under_voice` | Narration plus music to MP3/WAV, with optional presets, ducking strength, evolving arrangements and final mastering |
+| `bckgrnd_mix_video` | Synchronized MP4 export, copying the original picture (local) |
+| `bckgrnd_presets` | Save, list, retrieve and delete favorite mix settings (local) |
+| `bckgrnd_check_setup` | Check dependencies, output access and the actual music engine (local) |
 
 Rendering runs about **20x faster** than real time. Seven minutes of music takes
 about eighteen seconds.
@@ -88,6 +109,14 @@ about eighteen seconds.
 ## Changelog
 
 Latest release below. Full dated history → **[docs/Change-summary.md](docs/Change-summary.md)**.
+
+### v0.3.0: 10-31-2026
+
+Automatic preview selection and recommendations, persistent favorite presets,
+three ducking strengths, synchronized video export, evolving stem arrangements,
+finished-export mastering and a setup health check. Seven local tools and four
+hosted tools. The companion skill covers the complete workflow for Claude and
+Codex. Existing calls retain their defaults; limiter delay is now compensated.
 
 ### v0.2.0: 10-21-2026
 

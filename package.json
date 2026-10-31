@@ -1,6 +1,6 @@
 {
   "name": "bckgrnd-msc-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "An MCP server that renders bckgrnd-msc tracks to WAV and lays them under a narration, turned down while the voice talks.",
   "type": "module",
   "license": "MIT",
@@ -46,7 +46,8 @@
     "pretest": "node scripts/prepare-vercel.mjs",
     "test:package": "node scripts/test-package.mjs",
     "prepack": "pnpm run build",
-    "prepublishOnly": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run test:package"
+    "prepublishOnly": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run test:package",
+    "test:hosted": "node scripts/test-hosted.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",

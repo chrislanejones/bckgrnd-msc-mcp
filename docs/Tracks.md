@@ -58,3 +58,11 @@ They're a first pass, set per style from the style and the tempo, not from
 listening to each track under narration. They live in
 [src/moods.ts](../src/moods.ts), and they'll move as I listen to more narration
 over them.
+
+## Evolving arrangements
+
+Set `arrangement: "evolving"` on render, mix or preview tools to slowly change
+instrument levels across successive 16-bar phrases. Bass and pad stay relatively
+steady; percussion and melodies move through a gentler four-phrase arc with
+smooth transitions. Explicit stem cuts stay muted. The default `loop` mode
+retains the original arrangement. Custom music files cannot be rearranged.

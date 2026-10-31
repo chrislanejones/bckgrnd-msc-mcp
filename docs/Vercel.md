@@ -39,7 +39,9 @@ the user's choice to upload the selected narration.
 - Output: embedded MCP audio (`audio/mpeg`, 96 kbps), with metadata. Clients must
   support audio content or save its base64 bytes as an MP3. There is no persistent
   download URL. Temporary files are removed after the response is prepared.
-- Custom music files and longer narration remain available through local stdio.
+- Four hosted tools: list, render, mix and preview. Previews return up to three labeled MP3 attachments from the same 15–30-second excerpt.
+- Ducking strength, evolving arrangements and final loudness/peak mastering are available for hosted audio.
+- Presets, video exports, setup diagnostics, custom music files and longer narration require local stdio.
 - Two audio jobs per warm instance; this is not a global rate limit. Vercel plan
   quotas still apply. The function has a 60-second execution budget.
 

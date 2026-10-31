@@ -11,7 +11,7 @@ the music; ffmpeg matches loudness and ducks the music while the voice speaks.
 Control eight stems and inspect final loudness and true-peak measurements.
 
 Use the hosted Streamable HTTP endpoint for MP3 clips up to 120 seconds, or run
-the local stdio server for filesystem workflows, custom music and track previews.
+the local stdio server for filesystem workflows, custom music, saved presets, setup diagnostics and synchronized MP4 exports.
 The service is free, and the source is MIT licensed.
 
 ## Setup Requirements
@@ -22,7 +22,7 @@ The service is free, and the source is MIT licensed.
   including intro and tail, is limited to 120 seconds. Results embed MP3 audio.
 - Local setup requires Node.js 20+, pnpm, and ffmpeg for mixing and previews.
   Build from the public repository with `pnpm install` and `pnpm run build`,
-  then run `node dist/index.js`. The local package command is `pnpm dlx bckgrnd-msc-mcp@0.2.0`.
+  then run `node dist/index.js`. The local package command is `pnpm dlx bckgrnd-msc-mcp@0.3.0`.
 - `BCKGRND_MSC_API_TOKEN` (optional, self-hosted deployments): require bearer
   authentication on your own deployment. Not required for the public endpoint.
 
@@ -34,11 +34,14 @@ Content & Media
 - Render synthesized music with stem controls and fades.
 - Mix narration with music using measured loudness and automatic ducking.
 - Return output loudness and true-peak measurements.
-- Compare tracks against a narration excerpt using the local preview tool.
+- Automatically compare recommended tracks against an audible narration excerpt, locally or hosted.
+- Save local favorite presets and export synchronized MP4 video.
+- Choose subtle, normal or strong ducking and evolving stem arrangements.
+- Master the complete export to a chosen loudness and peak ceiling.
 - Follow the companion background-music skill for track selection and mixing guidance.
 
 ## Getting Started
-- Default local setup: `claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.2.0`
+- Default local setup: `claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0`
 - Hosted processing uploads narration to the project operator on Vercel; choose it explicitly after reviewing docs/Vercel.md.
 - Connect: `claude mcp add --transport http bckgrnd-msc https://bckgrnd-msc-mcp.vercel.app/mcp`
 - Install the companion skill: `pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music`
@@ -48,7 +51,10 @@ Content & Media
 - Tool: `bckgrnd_list_tracks` — browse and filter the music library.
 - Tool: `bckgrnd_render_track` — generate a track with stem controls and fades.
 - Tool: `bckgrnd_mix_under_voice` — mix narration with a generated track.
-- Tool: `bckgrnd_preview_tracks` — compare short mixes locally; unavailable on the hosted endpoint.
+- Tool: `bckgrnd_preview_tracks` — compare short mixes locally or as hosted MP3 attachments.
+- Tool: `bckgrnd_presets` — manage local favorite settings.
+- Tool: `bckgrnd_mix_video` — export synchronized MP4 locally.
+- Tool: `bckgrnd_check_setup` — check local dependencies and engine health.
 
 ## Tags
 audio, music, narration, podcast, background-music, ducking, loudness, wasm, typescript, mcp

@@ -14,6 +14,7 @@ import { arrangementJson, STEMS, type StemId, type TrackSummary } from './librar
 import { WavWriter } from './wav.js';
 import { atomicOutput } from './paths.js';
 import type { JobOptions } from './jobs.js';
+import type { MixSettings } from './settings.js';
 
 export const SAMPLE_RATE = 48_000;
 const BLOCK = 128;
@@ -38,6 +39,7 @@ export interface RenderOptions extends JobOptions {
   fadeInSeconds?: number;
   fadeOutSeconds?: number;
   overwrite?: boolean;
+  arrangement?: MixSettings['arrangement'];
 }
 
 export interface RenderResult {
@@ -49,6 +51,7 @@ export interface RenderResult {
   cut: StemId[];
   peak_dbfs: number;
   render_ms: number;
+  arrangement: 'loop' | 'evolving';
 }
 
 export async function renderTrack(opts: RenderOptions): Promise<RenderResult> {
@@ -69,6 +72,8 @@ async function renderToFile(opts: RenderOptions): Promise<RenderResult> {
   const cut = [...new Set(opts.cut ?? [])];
 
   const engine = new Engine(SAMPLE_RATE);
+  const arrangement = opts.arrangement ?? 'loop';
+  const song = JSON.parse(arrangementJson(opts.track.id)) as { mix: Record<string, number> };
   let writer: WavWriter | undefined;
   let peak = 0;
   try {
@@ -83,6 +88,12 @@ async function renderToFile(opts: RenderOptions): Promise<RenderResult> {
     const right = new Float32Array(BLOCK);
     let sinceYield = 0;
     for (let done = 0; done < frames; done += BLOCK) {
+      if (arrangement === 'evolving') {
+        const phrase = done / SAMPLE_RATE / (16 * 4 * 60 / opts.track.bpm);
+        for (const [index, stem] of STEMS.entries()) {
+          engine.set_volume_index(index, (song.mix[stem] ?? 0) * evolvingGain(stem, phrase));
+        }
+      }
       engine.process(left, right);
       const count = Math.min(BLOCK, frames - done);
       for (let i = 0; i < count; i++) {
@@ -117,7 +128,21 @@ async function renderToFile(opts: RenderOptions): Promise<RenderResult> {
     cut,
     peak_dbfs: peak > 0 ? Math.round(20 * Math.log10(peak) * 10) / 10 : -120,
     render_ms: Math.round(performance.now() - started),
+    arrangement,
   };
+}
+
+/** A four-phrase arc; cosine transitions avoid sudden stem changes. Cuts always stay muted. */
+export function evolvingGain(stem: StemId, phrase: number): number {
+  const levels: Record<StemId, readonly number[]> = {
+    kick: [0.65, 1, 0.45, 0.85], clap: [0.35, 0.7, 0.15, 0.6],
+    hats: [0.4, 0.8, 0.25, 0.65], bass: [0.9, 1, 0.85, 1],
+    stab: [0.55, 0.8, 0.35, 0.7], lead: [0.25, 0.55, 0.1, 0.4],
+    pad: [1, 0.85, 1, 0.9], arp: [0.2, 0.55, 0.15, 0.4],
+  };
+  const part = Math.floor(phrase) % 4;
+  const blend = (1 - Math.cos(Math.PI * (phrase % 1))) / 2;
+  return levels[stem][part]! * (1 - blend) + levels[stem][(part + 1) % 4]! * blend;
 }
 
 /** Raised-cosine fades, so the ends don't start or stop on a corner. */

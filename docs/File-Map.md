@@ -4,7 +4,12 @@
 |---|---|
 | `src/index.ts` | Entry point. Starts the server on stdio |
 | `src/server.ts` | Builds the `McpServer` and registers the tools. Tests use this directly |
-| `src/preview.ts` | Narration excerpts and track comparisons |
+| `src/preview.ts` | Activity-based excerpts, recommendations and track comparisons |
+| `src/workflow.ts` | Shared narration mix and preset resolution |
+| `src/settings.ts` | Shared validation and default mix settings |
+| `src/presets.ts` | Atomic local favorite settings |
+| `src/video.ts` | Probe, synchronize, mix and copy MP4 video |
+| `src/doctor.ts` | CLI/MCP dependency and engine diagnostics |
 | `src/jobs.ts` | Cancellation and MCP progress |
 | `src/remote.ts` | Hosted upload/audio adapter |
 | `api/mcp.ts` | Stateless HTTP endpoint |
@@ -21,7 +26,7 @@
 | `vendor/SOURCE.json` | Which bckgrnd-msc commit `vendor/` came from |
 | `scripts/sync-engine.mjs` | Refreshes `vendor/` from a bckgrnd-msc checkout |
 | `skills/background-music/SKILL.md` | The companion skill discoverable by the skills CLI |
-| `test/tools.test.ts` | The tests. They run the real server in memory |
+| `test/` | Real audio, video, preset, HTTP, reliability and MCP checks |
 | `docs/` | These pages |
 | `docs/adr/` | Design decisions |
 

@@ -1,6 +1,6 @@
 # Tools
 
-Four local tools. The hosted server exposes the first three with upload/audio schemas; see [Vercel hosting](Vercel.md). All paths are absolute. The server is started from a folder nobody
+Seven local tools. The hosted server exposes list, render, mix and preview with upload/audio schemas; see [Vercel hosting](Vercel.md). All paths are absolute. The server is started from a folder nobody
 picked, so a relative path would land somewhere surprising, and it refuses them
 instead. No tool replaces an existing file unless you pass `overwrite: true`.
 
@@ -25,12 +25,13 @@ up, then fades out.
 | `track` | string | required | Track id or name, any case: `rain`, `Night Drive` |
 | `seconds` | 1 to 3600 | required | Length |
 | `cut` | stem list | none | Stems to silence for the whole take, e.g. `["kick", "clap"]` |
+| `arrangement` | `loop`, `evolving` | `loop` | Original repetition or gradual stem-level variation |
 | `fade_in_seconds` | 0 to 30 | `1` | Fade-in |
 | `fade_out_seconds` | 0 to 60 | `4` | Fade-out |
 | `output_path` | string | temp file | Must end in `.wav` |
 | `overwrite` | boolean | `false` | Replace `output_path` if it exists |
 
-Returns `{ path, track, bpm, seconds, sample_rate, cut, peak_dbfs, render_ms }`.
+Returns `{ path, track, bpm, seconds, sample_rate, cut, peak_dbfs, render_ms, arrangement }`.
 
 Without an `output_path`, a unique UUID is appended to the filename in
 `BCKGRND_MSC_OUT_DIR`. Repeated and concurrent renders preserve earlier files.
@@ -42,7 +43,7 @@ after success. Cancellation or encoding errors preserve an existing output.
 A voice recording plus music to one file. The music starts a little before the
 voice, dips while the voice is talking, and fades out after it. Needs ffmpeg.
 
-Give exactly one of `track` or `music_path`.
+Give exactly one of `track` or `music_path`, directly or through a saved preset. Explicit values override preset settings; an explicit music_path replaces a saved track.
 
 | Argument | Type | Default | What it does |
 |---|---|---|---|
@@ -51,6 +52,11 @@ Give exactly one of `track` or `music_path`.
 | `music_path` | string | | Your own music file instead. Loops if it's shorter than the voice |
 | `music_db` | -40 to 0 | `-14` | Music loudness relative to the voice, in LU |
 | `loudness_lufs` | -30 to -9 | `-16` | Loudness of the voice in the result |
+| `preset` | string | | Saved local mix settings |
+| `ducking` | `subtle`, `normal`, `strong` | `normal` | Strength and recovery of ducking |
+| `arrangement` | `loop`, `evolving` | `loop` | Gradual variation for synthesized tracks |
+| `final_lufs` | -30 to -9 | off | Optional loudness target for the complete export |
+| `true_peak_dbfs` | -9 to -0.5 | -1.5 | Peak ceiling; requires final_lufs |
 | `duck` | boolean | `true` | Dip the music further while the voice talks |
 | `cut` | stem list | none | Stems to silence (only with `track`) |
 | `lead_in_seconds` | 0 to 30 | `2` | Music before the voice starts |
@@ -58,21 +64,65 @@ Give exactly one of `track` or `music_path`.
 | `output_path` | string | next to the voice | Must end in `.mp3` or `.wav` |
 | `overwrite` | boolean | `false` | Replace `output_path` if it exists |
 
-Returns `{ path, voice_seconds, total_seconds, music, music_db, loudness_lufs, voice_lufs, music_lufs, voice_gain_db, music_gain_db, duck, output_lufs, output_true_peak_dbfs }`.
+Returns `{ path, voice_seconds, total_seconds, music, music_db, loudness_lufs, voice_lufs, music_lufs, voice_gain_db, music_gain_db, duck, ducking, arrangement, cut, lead_in_seconds, tail_seconds, output_lufs, output_true_peak_dbfs }`. When applicable, also returns `preset`, `final_lufs`, `true_peak_dbfs` and `mastering_target_met`.
 
 The default output is `<voice name>.with-<track>.mp3` in the voice file's folder.
 `voice_lufs` and `music_lufs` are what was measured before anything was turned up
 or down. [Levels](Levels.md) covers what the numbers mean.
 
-## `bckgrnd_preview_tracks` (local)
+## `bckgrnd_preview_tracks`
 
-Compare one to three tracks under the same excerpt. Arguments: absolute
-`voice_path`, `tracks` (1–3 ids), `seconds` (15–30, default 20),
-`start_seconds` (default 0), optional `cut`, `music_db` (default -14), and
-`loudness_lufs` (default -16). If less narration remains, the excerpt is shorter.
+Compare one to three tracks on the same excerpt. Local arguments: absolute
+`voice_path`, optional `tracks` (1–3 ids), `content` (`narration`, `tutorial`,
+`story`, `tech`, `news`, `hype`; default narration), `seconds` (15–30, default 20),
+optional `start_seconds`, `preset`, and mix settings for levels, cuts, ducking,
+arrangement and mastering. Omitting tracks recommends two; omitting the start
+selects a window with substantial audible activity. This is not transcription.
+
 Each preview has no lead-in and a one-second tail. Returns `{ previews,
-start_seconds }`; each preview contains the mix metadata, path and measurements.
-Files land in a unique `previews-*` folder under `BCKGRND_MSC_OUT_DIR`.
+start_seconds, excerpt_seconds, selection }`. Each local preview includes mix
+metadata, `track`, a playable path and `full_mix_arguments` for the original
+recording. Files land in a unique previews folder under `BCKGRND_MSC_OUT_DIR`.
+The narration may be at most one hour. Explicit starts past its end are rejected.
+
+Hosted previews accept `voice_base64`/`voice_format`, not paths or presets, and
+return labeled MP3 audio with measurements. See [Vercel hosting](Vercel.md).
+
+## `bckgrnd_presets` (local)
+
+`action`: `list`, `get`, `save`, or `delete`. `name` is required except for list;
+use 1–64 lowercase letters, digits and hyphens. Save accepts a `settings` object
+with track, levels, cuts, ducking, arrangement, intro/tail and mastering options.
+Unknown fields and media paths are rejected. Existing names require
+`overwrite: true`. List returns `{ presets: string[] }`; get/save return
+`{ name, settings }`; delete returns `{ name, deleted: true }`.
+
+Files live in `~/.config/bckgrnd-msc/presets` or below the absolute
+`BCKGRND_MSC_CONFIG_DIR`. Files are published atomically. Callers must explicitly
+request save/delete; ordinary rendering never persists preferences.
+
+## `bckgrnd_mix_video` (local)
+
+Required `video_path`: an existing absolute input path. Accepts the audio mix
+settings, `preset`, `track` or `music_path`, and optional absolute `.mp4`
+`output_path` and `overwrite`. Intro/tail arguments are not exposed; saved
+intro/tail values are ignored to retain the source video timing.
+
+Defaults to `<video>.with-music.mp4`. Copies the first non-cover H.264, HEVC, AV1
+or MPEG-4 video stream, mixes the first audio stream and encodes AAC. Requires
+both video and audible audio, with duration at most one hour. Input paths cannot
+be overwritten. The output contains one video and one audio stream. Source
+music, if any, remains part of the input; no vocal separation is performed.
+Returns audio mix metadata plus `video_codec`, `video_copied: true` and
+`audio_offset_seconds`. Final loudness is measured from the actual MP4.
+
+## `bckgrnd_check_setup` (local)
+
+No arguments. Checks Node, ffmpeg/ffprobe, writable output storage and a real
+short WASM render, removing its temporary files. Returns `{ ok, checks,
+connections }` with specific diagnostic messages and installation commands.
+The CLI exposes the same check as `--check` or `doctor`, returning exit 0 when
+all checks pass and 1 otherwise. It never modifies client configuration.
 
 ## Progress and cancellation
 

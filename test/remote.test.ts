@@ -24,7 +24,7 @@ afterAll(async () => {
 
 it('lists tools over real stateless HTTP without filesystem inputs', async () => {
   const { tools } = await client.listTools();
-  expect(tools).toHaveLength(3);
+  expect(tools).toHaveLength(4);
   expect(JSON.stringify(tools)).not.toContain('output_path');
   const result = await client.callTool({ name: 'bckgrnd_list_tracks', arguments: {} });
   expect(result.isError).not.toBe(true);
@@ -82,5 +82,25 @@ it('rejects non-JSON media types and accepts JSON with a charset', async () => {
   }, body: JSON.stringify({ jsonrpc: '2.0', id: 99, method: 'tools/list', params: {} }) });
   expect(response.status).toBe(200);
   const body = await response.json() as { result: { tools: unknown[] } };
-  expect(body.result.tools).toHaveLength(3);
+  expect(body.result.tools).toHaveLength(4);
 });
+
+it('returns two labeled hosted previews with no local paths and mastered MP3 measurements', async () => {
+  const fixture = readFileSync(new URL('./fixtures/speech.wav', import.meta.url)).toString('base64');
+  const result = await client.callTool({ name: 'bckgrnd_preview_tracks', arguments: {
+    voice_base64: fixture, voice_format: 'wav', content: 'tech', seconds: 15,
+    ducking: 'subtle', arrangement: 'evolving', final_lufs: -18, true_peak_dbfs: -2,
+  } });
+  expect(result.isError, JSON.stringify(result.content)).not.toBe(true);
+  const audio = (result.content as Array<{ type: string; data?: string }>).filter((c) => c.type === 'audio');
+  expect(audio).toHaveLength(2);
+  expect(audio.every((c) => Buffer.from(c.data!, 'base64').length > 1000)).toBe(true);
+  expect(JSON.stringify(result.structuredContent)).not.toContain('/tmp/');
+  const data = result.structuredContent as { previews: Array<{ track: string; output_lufs: number; output_true_peak_dbfs: number; mastering_target_met: boolean }> };
+  expect(data.previews.map((p) => p.track)).toEqual(['drive', 'glass']);
+  for (const p of data.previews) {
+    expect(p.mastering_target_met, JSON.stringify(p)).toBe(true);
+    expect(Math.abs(p.output_lufs + 18)).toBeLessThanOrEqual(0.7);
+    expect(p.output_true_peak_dbfs).toBeLessThanOrEqual(-1.9);
+  }
+}, 30_000);
