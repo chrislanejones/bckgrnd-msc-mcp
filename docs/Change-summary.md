@@ -1,5 +1,13 @@
 # Change Summary
 
+## v0.3.1: 10-31-2026
+
+Distribution: npm (`bckgrnd-msc-mcp@0.3.1`), GitHub release archive and hosted deployment.
+
+- The background-music skill no longer includes the hosted endpoint URL or the commands to connect it. This clears the skills.sh warning about an unverifiable external URL.
+- Agents use a remote server only when you connected one yourself. Hosted setup instructions live in docs/Vercel.md, which the skill links to.
+- No server, tool or audio changes.
+
 ## v0.3.0: 10-31-2026
 
 Distribution: npm (`bckgrnd-msc-mcp@0.3.0`), GitHub release archive and hosted deployment.

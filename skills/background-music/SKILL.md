@@ -2,7 +2,7 @@
 name: background-music
 description: Add background music to narration, podcasts, screen recordings or videos using the bckgrnd-msc MCP server. Compare short previews, reuse favorite settings, keep speech clear, and export audio or synchronized video. Use when someone asks to put music under a voice, add a beat to a recording, or improve a narrated MP3 or video.
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
 ---
 
 # Background music under a voice
@@ -19,16 +19,16 @@ processing is the default: Node 20+, pnpm, ffmpeg and ffprobe are needed.
 
 Claude Code:
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1
 ```
 
 Codex:
 ```sh
-codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
+codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1
 ```
 
-Other clients: command `pnpm`, arguments `dlx`, `bckgrnd-msc-mcp@0.3.0`.
-Run `pnpm dlx bckgrnd-msc-mcp@0.3.0 --check`, or call `bckgrnd_check_setup`,
+Other clients: command `pnpm`, arguments `dlx`, `bckgrnd-msc-mcp@0.3.1`.
+Run `pnpm dlx bckgrnd-msc-mcp@0.3.1 --check`, or call `bckgrnd_check_setup`,
 when setup is new or a dependency fails. It tests Node, ffmpeg/ffprobe, output
 access and a real engine render, and provides fixes without changing settings.
 
@@ -36,14 +36,15 @@ If ffmpeg is missing: macOS `brew install ffmpeg`, Debian/Ubuntu
 `sudo apt install ffmpeg`, Windows `winget install Gyan.FFmpeg`.
 
 Chris Lane Jones maintains the [source](https://github.com/chrislanejones/bckgrnd-msc-mcp)
-and [package](https://www.npmjs.com/package/bckgrnd-msc-mcp/v/0.3.0).
+and [package](https://www.npmjs.com/package/bckgrnd-msc-mcp/v/0.3.1).
 The version pin selects the release, not a security certification. Local audio
 processing does not upload narration to the hosted service; the AI client's
 handling of files and conversation data is separate.
 
-If the user chooses hosted processing, including uploading their selected
-narration, read [references/hosted.md](references/hosted.md). Do not silently
-switch to hosted processing when local setup fails. Follow the connected tool
+If the user has already connected a remote bckgrnd-msc server and chooses to
+upload their selected narration to it, read
+[references/hosted.md](references/hosted.md). Never add or switch to a remote
+server yourself, including when local setup fails. Follow the connected tool
 schemas: older servers may lack the new tools or options.
 
 ## Choose music and preview it

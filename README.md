@@ -17,16 +17,16 @@ machine when you ask for it.
 Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
-Use the local server by default, pinned to version 0.3.0:
+Use the local server by default, pinned to version 0.3.1:
 
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
+claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1
 pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music
 ```
 
 Local processing keeps narration on your machine rather than uploading it to
 our hosted MCP. You can also [run from a clone](docs/Getting-Started.md#from-a-clone)
-or install the [v0.3.0 release archive](https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/tag/v0.3.0).
+or install the [v0.3.1 release archive](https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/tag/v0.3.1).
 The current skills installer requires Node 22.20+.
 
 For an explicitly chosen hosted alternative (clips up to two minutes), read
@@ -53,8 +53,8 @@ Ask your agent:
 - "Add music to this screen recording and keep the video synchronized."
 - "Master the finished export to -18 LUFS with a -2 dBTP ceiling."
 
-Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.0 --check`.
-Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0`.
+Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.1 --check`.
+Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1`.
 
 [Workflow examples](docs/Workflows.md) cover previews, presets, video exports
 and mastering. All seven tools run locally. Hosted processing adds previews,
@@ -110,6 +110,13 @@ about eighteen seconds.
 ## Changelog
 
 Latest release below. Full dated history → **[docs/Change-summary.md](docs/Change-summary.md)**.
+
+### v0.3.1: 10-31-2026
+
+The companion skill no longer carries the hosted server's address or the
+commands to connect it, which clears the skills.sh security warning. Agents
+only use a remote server you added yourself; hosted setup lives in
+[docs/Vercel.md](docs/Vercel.md). The MCP server itself is unchanged.
 
 ### v0.3.0: 10-31-2026
 

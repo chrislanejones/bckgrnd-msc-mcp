@@ -1,6 +1,6 @@
 {
   "name": "bckgrnd-msc-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "An MCP server that renders bckgrnd-msc tracks to WAV and lays them under a narration, turned down while the voice talks.",
   "type": "module",
   "license": "MIT",

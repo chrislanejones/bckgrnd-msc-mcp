@@ -7,7 +7,7 @@
   "max_upload_bytes": 2097152,
   "output": "MP3 embedded in MCP audio content",
   "source": "https://github.com/chrislanejones/bckgrnd-msc-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "tools": [
     "bckgrnd_list_tracks",
     "bckgrnd_render_track",
