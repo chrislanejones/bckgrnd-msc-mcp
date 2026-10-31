@@ -19,16 +19,18 @@ processing is the default: Node 20+, pnpm, ffmpeg and ffprobe are needed.
 
 Claude Code:
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
+claude mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz
 ```
 
 Codex:
 ```sh
-codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
+codex mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz
 ```
 
-Other clients: command `pnpm`, arguments `dlx`, `bckgrnd-msc-mcp@0.3.0`.
-Run `pnpm dlx bckgrnd-msc-mcp@0.3.0 --check`, or call `bckgrnd_check_setup`,
+Other clients: command `pnpm`, arguments `dlx` and the same release-archive URL.
+This release is distributed through GitHub Releases while its npm registry
+publication awaits maintainer reauthentication.
+Run `pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz --check`, or call `bckgrnd_check_setup`,
 when setup is new or a dependency fails. It tests Node, ffmpeg/ffprobe, output
 access and a real engine render, and provides fixes without changing settings.
 
@@ -36,7 +38,7 @@ If ffmpeg is missing: macOS `brew install ffmpeg`, Debian/Ubuntu
 `sudo apt install ffmpeg`, Windows `winget install Gyan.FFmpeg`.
 
 Chris Lane Jones maintains the [source](https://github.com/chrislanejones/bckgrnd-msc-mcp)
-and [package](https://www.npmjs.com/package/bckgrnd-msc-mcp/v/0.3.0).
+and [release archive](https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/tag/v0.3.0).
 The version pin selects the release, not a security certification. Local audio
 processing does not upload narration to the hosted service; the AI client's
 handling of files and conversation data is separate.

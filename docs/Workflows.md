@@ -96,7 +96,7 @@ from the finished export. See [Levels](Levels.md) for tolerances and ducking.
 ## Check setup
 
 ```sh
-pnpm dlx bckgrnd-msc-mcp@0.3.0 --check
+pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz --check
 ```
 
 The equivalent MCP tool is `bckgrnd_check_setup`. Both test installed binaries,

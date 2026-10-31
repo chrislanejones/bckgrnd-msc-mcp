@@ -17,10 +17,12 @@ machine when you ask for it.
 Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
-Use the local server by default, pinned to version 0.3.0:
+Use the local server by default, pinned to the v0.3.0 release archive.
+The GitHub package is ready to install; publication to the npm registry is
+pending restoration of the maintainer's registry login.
 
 ```sh
-claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0
+claude mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz
 pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music
 ```
 
@@ -52,8 +54,8 @@ Ask your agent:
 - "Add music to this screen recording and keep the video synchronized."
 - "Master the finished export to -18 LUFS with a -2 dBTP ceiling."
 
-Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.0 --check`.
-Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0`.
+Local setup check: `pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz --check`.
+Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz`.
 
 [Workflow examples](docs/Workflows.md) cover previews, presets, video exports
 and mastering. All seven tools run locally. Hosted processing adds previews,

@@ -29,8 +29,8 @@ export async function checkSetup(job: JobOptions = {}) {
   finally { if (scratch) rmSync(scratch, { recursive: true, force: true }); }
   return { ok: checks.every((c) => c.ok), checks,
     connections: {
-      claude: 'claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0',
-      codex: 'codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.0',
+      claude: 'claude mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz',
+      codex: 'codex mcp add bckgrnd-msc -- pnpm dlx https://github.com/chrislanejones/bckgrnd-msc-mcp/releases/download/v0.3.0/bckgrnd-msc-mcp-0.3.0.tgz',
       skill: 'pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music',
     },
   };
