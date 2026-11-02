@@ -132,6 +132,18 @@ part of the user's request. Input files cannot be overwritten.
 
 Use `bckgrnd_render_track` only when the user wants standalone music.
 
+## Cut to the beat
+
+When the user wants to cut video, time captions or animate to the music, call
+`bckgrnd_beat_map` with the same `track` and the render's `seconds` (or the
+mix's `total_seconds`). The music starts at 0:00 in every result, so leave
+`offset_seconds` at 0 unless the user places the music later on their own
+timeline. Use its times as given. Don't work beats out from the bpm: the
+rendered tempo is a touch slower, and the difference reaches a quarter of a
+second over an hour. Beat 1 of each bar is the downbeat, the natural place for
+a cut. Pass a `.csv` or `.json` `output_path` when an editor or script will
+read the list.
+
 ## Favorite settings
 
 When asked to remember a preferred mix, use local `bckgrnd_presets`:

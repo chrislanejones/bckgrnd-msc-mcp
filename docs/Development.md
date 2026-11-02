@@ -18,7 +18,7 @@ in-memory transport, the same way a client would. Nothing is mocked.
 
 | Group | What it checks |
 |---|---|
-| Tool list | The seven local tools are there |
+| Tool list | The eight local tools are there |
 | `bckgrnd_list_tracks` | 18 tracks, 8 stems, every track has a mood, the filters |
 | `bckgrnd_render_track` | Real WAV, right length, has sound, silent with every stem cut, fades to nothing, refuses bad paths and existing files |
 | Levels | The gain math, silent music left alone, reading ffmpeg's loudness summary |

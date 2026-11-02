@@ -1,5 +1,11 @@
 # Change Summary
 
+## Unreleased
+
+- New `bckgrnd_beat_map` tool, local and hosted: the exact time of every beat and bar of a track, with bar and beat numbers, for cutting video or timing animation to the music.
+- Times are read from the engine rather than worked out from the bpm. The engine starts each sixteenth on a whole sample, so the nominal bpm drifts from the audio by up to about 0.3 s over an hour. The map matches the rendered WAV to the sample.
+- Optional `offset_seconds`, and CSV or JSON output for editors and scripts. Lists over 1,000 beats are saved to a file.
+
 ## v0.3.1: 10-31-2026
 
 Distribution: npm (`bckgrnd-msc-mcp@0.3.1`), GitHub release archive and hosted deployment.

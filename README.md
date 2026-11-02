@@ -52,12 +52,13 @@ Ask your agent:
 - "Save these as my podcast settings; use subtle ducking and an evolving arrangement."
 - "Add music to this screen recording and keep the video synchronized."
 - "Master the finished export to -18 LUFS with a -2 dBTP ceiling."
+- "Give me the beat times for 90 seconds of Slipstream so I can cut the video to it."
 
 Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.1 --check`.
 Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1`.
 
 [Workflow examples](docs/Workflows.md) cover previews, presets, video exports
-and mastering. All seven tools run locally. Hosted processing adds previews,
+and mastering. All eight tools run locally. Hosted processing adds previews,
 ducking controls, arrangements and mastering for short uploaded audio; saved
 presets, video and setup diagnostics stay local.
 
@@ -94,6 +95,7 @@ decided, what was turned down, and what would make it the wrong call later.
 | `bckgrnd_mix_video` | Synchronized MP4 export, copying the original picture (local) |
 | `bckgrnd_presets` | Save, list, retrieve and delete favorite mix settings (local) |
 | `bckgrnd_check_setup` | Check dependencies, output access and the actual music engine (local) |
+| `bckgrnd_beat_map` | The exact time of every beat and bar, read from the engine, for cutting video to the music. Inline, or saved as CSV or JSON |
 
 Rendering runs about **20x faster** than real time. Seven minutes of music takes
 about eighteen seconds.

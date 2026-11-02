@@ -12,7 +12,8 @@ const ffmpegPath = fileURLToPath(new URL('../vendor/runtime/ffmpeg', import.meta
 const ffprobePath = fileURLToPath(new URL('../vendor/runtime/ffprobe', import.meta.url));
 import { z } from 'zod';
 import { durationSeconds, measureAudio, masterAudio } from './mix.js';
-import { STEMS } from './library.js';
+import { findTrack, STEMS, unknownTrackMessage } from './library.js';
+import { beatMap, beatMapInput, beatMapOutput, MAX_INLINE_BEATS } from './beats.js';
 import { createServer, VERSION } from './server.js';
 import { arrangementSchema, duckingSchema } from './settings.js';
 import { contentSchema } from './preview.js';
@@ -117,6 +118,19 @@ export function createRemoteServer(): McpServer {
     inputSchema: { section: z.enum(['EDM', 'Lofi', 'Breaks']).optional(), max_energy: z.number().int().min(1).max(5).optional() },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   }, (args) => localCall('bckgrnd_list_tracks', args));
+
+  server.registerTool('bckgrnd_beat_map', {
+    description: `Exact time of every beat and bar of a track, read from the engine, for cutting video or timing animation to the music. Instant; nothing is rendered. The music starts at 0:00 in render and mix results. Beats are listed inline up to ${MAX_INLINE_BEATS}; past that only the grid is returned, and beat n starts at offset_seconds + n * beat_samples / sample_rate exactly.`,
+    inputSchema: beatMapInput,
+    outputSchema: beatMapOutput,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, ({ track: asked, seconds, offset_seconds }) => {
+    const track = findTrack(asked);
+    if (!track) return error(unknownTrackMessage(asked));
+    const { beats, ...grid } = beatMap(track, seconds, offset_seconds);
+    const text = `${grid.track}: ${grid.beat_count} beats in ${grid.bar_count} bars, one beat every ${grid.beat_seconds} s (${grid.measured_bpm} bpm as rendered).`;
+    return { content: [{ type: 'text', text }], structuredContent: beats.length <= MAX_INLINE_BEATS ? { ...grid, beats } : grid };
+  });
 
   server.registerTool('bckgrnd_render_track', {
     description: 'Render 1–120 seconds of synthesized background music. Returns embedded MP3 audio. No output path is needed. For longer renders use the local server.',

@@ -1,6 +1,6 @@
 # Tools
 
-Seven local tools. The hosted server exposes list, render, mix and preview with upload/audio schemas; see [Vercel hosting](Vercel.md). All paths are absolute. The server is started from a folder nobody
+Eight local tools. The hosted server exposes list, render, mix, preview and beat map with upload/audio schemas; see [Vercel hosting](Vercel.md). All paths are absolute. The server is started from a folder nobody
 picked, so a relative path would land somewhere surprising, and it refuses them
 instead. No tool replaces an existing file unless you pass `overwrite: true`.
 
@@ -123,6 +123,40 @@ short WASM render, removing its temporary files. Returns `{ ok, checks,
 connections }` with specific diagnostic messages and installation commands.
 The CLI exposes the same check as `--check` or `doctor`, returning exit 0 when
 all checks pass and 1 otherwise. It never modifies client configuration.
+
+## `bckgrnd_beat_map`
+
+The exact time of every beat and bar in a track, for cutting video, timing
+captions or placing animation on the beat. Nothing is rendered, so it answers
+right away.
+
+The times come from the engine, not from the bpm. The engine starts every
+sixteenth on a whole sample, so a bar runs a few samples longer than the bpm
+says: Rain's bar is 137,152 samples, not 137,142.86. That's nothing in one bar
+and about a quarter of a second after an hour, which is a missed cut. The map
+matches the WAV to the sample at any length.
+
+The music starts at 0:00 in `bckgrnd_render_track` files and in both mix
+results; the lead-in only delays the voice. So pass the render's `seconds` or
+the mix's `total_seconds` and leave `offset_seconds` at 0.
+
+| Argument | Type | Default | What it does |
+|---|---|---|---|
+| `track` | string | required | Track id or name |
+| `seconds` | 1 to 3600 | required | Length of the music |
+| `offset_seconds` | 0 to 3600 | `0` | Added to every time, for music placed later on your timeline |
+| `output_path` | string | none | Save every beat; must end in `.csv` (`time,bar,beat`) or `.json` (local) |
+| `overwrite` | boolean | `false` | Replace `output_path` if it exists (local) |
+
+Returns `{ track, bpm, measured_bpm, sample_rate, beats_per_bar, beat_seconds,
+bar_seconds, beat_samples, bar_samples, seconds, offset_seconds, beat_count,
+bar_count, beats: [{ time, bar, beat }], path? }`. Bars and beats count from 1;
+beat 1 is the downbeat. Times have six decimals, finer than one sample.
+
+Up to 1,000 beats come back inline. A longer list is saved as CSV in
+`BCKGRND_MSC_OUT_DIR` and only its `path` comes back. The hosted tool has no
+files, so past 1,000 beats it returns the grid alone: beat n starts at
+`offset_seconds + n * beat_samples / sample_rate`, exactly.
 
 ## Progress and cancellation
 

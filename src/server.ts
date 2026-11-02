@@ -5,6 +5,7 @@ import { registerPreview } from './preview.js';
 import { registerVideo } from './video.js';
 import { registerPresets } from './presets.js';
 import { registerDoctor } from './doctor.js';
+import { registerBeatMap } from './beats.js';
 
 export const VERSION = (
   JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }
@@ -17,5 +18,6 @@ export function createServer(): McpServer {
   registerVideo(server);
   registerPresets(server);
   registerDoctor(server);
+  registerBeatMap(server);
   return server;
 }

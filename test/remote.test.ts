@@ -24,7 +24,7 @@ afterAll(async () => {
 
 it('lists tools over real stateless HTTP without filesystem inputs', async () => {
   const { tools } = await client.listTools();
-  expect(tools).toHaveLength(4);
+  expect(tools).toHaveLength(5);
   expect(JSON.stringify(tools)).not.toContain('output_path');
   const result = await client.callTool({ name: 'bckgrnd_list_tracks', arguments: {} });
   expect(result.isError).not.toBe(true);
@@ -82,7 +82,18 @@ it('rejects non-JSON media types and accepts JSON with a charset', async () => {
   }, body: JSON.stringify({ jsonrpc: '2.0', id: 99, method: 'tools/list', params: {} }) });
   expect(response.status).toBe(200);
   const body = await response.json() as { result: { tools: unknown[] } };
-  expect(body.result.tools).toHaveLength(4);
+  expect(body.result.tools).toHaveLength(5);
+});
+
+it('maps beats over HTTP inline, and returns only the exact grid for long lists', async () => {
+  const short = await client.callTool({ name: 'bckgrnd_beat_map', arguments: { track: 'rain', seconds: 10 } });
+  expect(short.isError).not.toBe(true);
+  expect(short.structuredContent).toMatchObject({ beat_samples: 34_288, beat_count: 14 });
+  expect((short.structuredContent as { beats: unknown[] }).beats).toHaveLength(14);
+  const long = await client.callTool({ name: 'bckgrnd_beat_map', arguments: { track: 'slipstream', seconds: 3600 } });
+  expect(long.structuredContent).not.toHaveProperty('beats');
+  expect(long.structuredContent).not.toHaveProperty('path');
+  expect(long.structuredContent).toMatchObject({ beat_samples: 16_552 });
 });
 
 it('returns two labeled hosted previews with no local paths and mastered MP3 measurements', async () => {
