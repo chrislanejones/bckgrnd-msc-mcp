@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerProjects } from './projects.js';
 import { registerTools } from './tools.js';
 import { registerPreview } from './preview.js';
 import { registerVideo } from './video.js';
@@ -14,6 +15,7 @@ export const VERSION = (
 export function createServer(): McpServer {
   const server = new McpServer({ name: 'bckgrnd-msc', version: VERSION });
   registerTools(server);
+  registerProjects(server);
   registerPreview(server);
   registerVideo(server);
   registerPresets(server);

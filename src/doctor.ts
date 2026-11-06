@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+import { verifyProjectBundle } from './projects.js';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -17,6 +19,8 @@ export async function checkSetup(job: JobOptions = {}) {
       checks.push({ name, ok: true, detail: stdout.split('\n')[0] ?? name });
     } catch (error) { checks.push({ name, ok: false, detail: (error as Error).message }); }
   }
+  try { const bundle = verifyProjectBundle(); checks.push({ name: 'project bundle', ok: true, detail: `${bundle.renderer} · ${bundle.buildId}` }); }
+  catch (error) { checks.push({ name: 'project bundle', ok: false, detail: (error as Error).message }); }
   let scratch: string | undefined;
   try {
     scratch = mkdtempSync(join(defaultOutDir(), '.health-'));
@@ -29,8 +33,8 @@ export async function checkSetup(job: JobOptions = {}) {
   finally { if (scratch) rmSync(scratch, { recursive: true, force: true }); }
   return { ok: checks.every((c) => c.ok), checks,
     connections: {
-      claude: 'claude mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1',
-      codex: 'codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1',
+      claude: `claude mcp add bckgrnd-msc -- ${JSON.stringify(process.execPath)} ${JSON.stringify(fileURLToPath(new URL('./index.js', import.meta.url)))}`,
+      codex: `codex mcp add bckgrnd-msc -- ${JSON.stringify(process.execPath)} ${JSON.stringify(fileURLToPath(new URL('./index.js', import.meta.url)))}`,
       skill: 'pnpm dlx skills add chrislanejones/bckgrnd-msc-mcp --skill background-music',
     },
   };

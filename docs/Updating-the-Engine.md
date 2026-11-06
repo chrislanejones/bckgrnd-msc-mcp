@@ -1,48 +1,45 @@
-# Updating the Engine
+# Updating the shared render bundle
 
-The engine and the track library aren't built here. They're copied in from a built
-bckgrnd-msc checkout, so this repo never needs Rust or `wasm-pack`.
-
-## When to sync
-
-| Changed in bckgrnd-msc | Sync? |
-|---|---|
-| Anything in `engine-core/` (the sound) | Yes |
-| A track added or rewritten (`app/Support/Music/`) | Yes |
-| The website's UI | No |
-
-## How
+The app builds WASM and the shared project renderer. MCP vendors that complete
+bundle; a clean package install requires no sibling app checkout or Rust tools.
+Sync after engine, source library, project contracts, resolver or rendering changes.
+A UI-only change may retain audio behavior, but a release still records one exact
+reviewed app build and commit.
 
 ```sh
 cd ../bckgrnd-msc
-pnpm run build:engine                         # rebuild the .wasm
-php tools/export-library.php public/library   # only if tracks changed
-
+pnpm run build:engine
+pnpm run build
+# Source must already be committed before this release build.
 cd ../bckgrnd-msc-mcp
 pnpm run sync-engine ../bckgrnd-msc
+pnpm run typecheck
+pnpm run lint
 pnpm test
+pnpm run test:package
 ```
 
-The path can also come from `BCKGRND_MSC_DIR`. Without either, the script looks
-for `../bckgrnd-msc`.
+`BCKGRND_MSC_DIR` can supply the source checkout. `--allow-dirty` is development
+only and produces an explicit warning in project-tool results. Do not publish a
+bundle with `SOURCE.json.dirty: true`.
 
-## What it writes
+The sync stages engine, library, contracts, generated shared runtime/declarations
+and fixtures, verifies their build hashes, boots the engine and resolves all
+tracks, then swaps the validated directory into `vendor/`. A normal failure leaves
+the old bundle intact. `.vendor-previous` is retained for rollback; archive it
+outside the repo after inspecting it before another sync. A crash between directory
+renames requires restoring `.vendor-previous`; this is a maintainer operation,
+not a live updater. Never copy individual files into an installed package.
 
-| File | From |
-|---|---|
-| `vendor/engine/bckgrnd_msc_engine.js` | `public/wasm/` |
-| `vendor/engine/bckgrnd_msc_engine.d.ts` | `public/wasm/` |
-| `vendor/engine/bckgrnd_msc_engine_bg.wasm` | `public/wasm/` |
-| `vendor/library/*.json` | `public/library/` |
-| `vendor/SOURCE.json` | The checkout's commit, and whether the engine or tracks had uncommitted changes |
+`vendor/SOURCE.json` records app commit, build identity, supported versions and a
+content hash for every asset. Project tools verify this before rendering. The
+package allowlist includes contracts/shared/fixtures as well as engine/library.
+The pack test installs in a fresh directory containing spaces and non-ASCII text,
+starts stdio with a restricted PATH and exercises project validation/render/narration
+and existing stock/preset tools. It caught wasm-pack's nested `.gitignore`
+excluding WASM from the package; sync omits that generated ignore file.
 
-Don't release from a sync where `SOURCE.json` says `"dirty": true`. That copy
-can't be traced back to a commit.
-
-## After a sync
-
-- Run `pnpm test`. The render tests catch an engine that won't boot or plays silence.
-- If a track was added, give its style an entry in `src/moods.ts`. A style with no
-  entry shows up as `unrated`, and the test that checks every track has a mood fails.
-- If `bckgrnd_msc_engine.js` changed but nothing under `engine-core/src` did, a
-  wasm-bindgen update changed the glue. Read the diff before you release.
+After an audio change, rebuild and repeat app and MCP audio/parity checks. Use the
+app's `tools/verify-render-parity.mjs` with an actual installed Linux executable.
+Byte equality is asserted only for isolated WASM noise state, matching engine and
+fixed PCM metadata. Preserve an earlier packed artifact alongside the source stamp.

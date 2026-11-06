@@ -130,3 +130,26 @@ configuration. The same check is available as `bckgrnd_check_setup`.
 
 Ask your agent: "list the bckgrnd-msc tracks." You should get eighteen back. Then
 "render 30 seconds of Rain" should hand you a WAV path in a second or two.
+
+## Night 6 candidate in T3 Code
+
+Use the tested `0.4.0-rc.1` tarball from this checkout, not an unpublished registry
+version. Install it into a stable local directory with pnpm and no dev dependencies.
+Run the installed `dist/index.js --check`; its `connections` output includes the
+actual Node executable and server entrypoint. Configure only `bckgrnd-msc`:
+
+```sh
+codex mcp add bckgrnd-msc -- /absolute/path/to/node /absolute/path/to/installed/dist/index.js
+```
+
+T3 Code's Codex provider must reconnect its MCP session to discover a newly added
+server. Verify by calling `bckgrnd_validate_project`, `bckgrnd_render_project`, then
+`bckgrnd_mix_under_voice` with the same saved project. An SDK/terminal smoke test is
+not this client test. Keep stdout reserved for protocol messages; logs use stderr.
+Use local stdio; no network bridge is needed.
+
+The desktop bundles its own PHP/Electron/audio assets. It does not install Node or
+ffmpeg for the MCP client. Project WAV rendering needs Node 20+; narration/video
+also need ffmpeg and ffprobe accessible to that configured process. A missing
+executable returns a useful limitation and leaves standalone rendering usable.
+No local failure uploads narration to the hosted service.

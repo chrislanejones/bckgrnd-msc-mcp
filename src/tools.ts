@@ -157,6 +157,7 @@ Levels are measured, not guessed: both files are measured in LUFS, the voice is 
 
 Supports saved preset settings, ducking strength (subtle/normal/strong), evolving arrangements, and optional final_lufs/true_peak_dbfs mastering. Explicit arguments override saved settings.\n\nGive exactly one of:
   - track (string): a bckgrnd-msc track id or name. It's rendered to the right length automatically. Pick one with bckgrnd_list_tracks to suit the content.
+  - project_path (string): an absolute saved-project path. Preserves its accepted patterns and mix. Do not combine with cut or evolving arrangement.
   - music_path (string): an absolute path to your own music file. It loops if it's shorter than the voice.
 
 Args:
@@ -194,6 +195,7 @@ Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, v
         final_lufs: z.number().optional(),
         true_peak_dbfs: z.number().optional(),
         mastering_target_met: z.boolean().optional(),
+        project: z.record(z.string(), z.unknown()).optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },

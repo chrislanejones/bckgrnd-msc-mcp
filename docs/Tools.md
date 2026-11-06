@@ -178,3 +178,33 @@ Errors come back as tool errors with the fix in the message.
 | `"ffmpeg" isn't installed` | No ffmpeg on `PATH` | The message has the install line |
 | `Give exactly one of track or music_path` | Both or neither | Pick one |
 | `... is silent` | The voice file has no sound | Check the file |
+
+## Saved projects (0.4.0-rc.1 candidate, local)
+
+`bckgrnd_validate_project({project_path})` validates an absolute snapshot file,
+source library hash, schema versions and the complete bundled renderer. It returns
+identity/revision, renderer/build/app commit, resolved-event/source/content hashes,
+name and warnings. It never changes the file.
+
+`bckgrnd_render_project` accepts `project_path`, required `seconds` (0–600),
+`start_seconds` (0–600), `fade_in_seconds` (default 0), `fade_out_seconds` (0.02),
+`tail_seconds` (0–30), `sample_rate` (44100 or 48000, default 48000), optional
+`output_path` and `overwrite` (false). Fades must fit within the musical range.
+Output is atomic PCM16 stereo WAV; cancellation publishes no partial file. Results
+include path, revision/build identity, frames, duration, peak/RMS and render time.
+Malformed patterns, unknown formats/versions and missing dependencies fail first.
+
+Accepted notes/mix/effects render exactly as saved. An explicitly empty lane stays
+empty. Scenes are alternatives, not an automatic sequence. Transient performance
+and unaccepted auditions are excluded. Kick tuning stays on the source root.
+
+`bckgrnd_mix_under_voice` accepts exactly one source: `track`, `music_path` or
+`project_path`. Project sources reject explicit cuts and evolving arrangements.
+A named preset can supply voice loudness/ducking/mastering; inherited stock track,
+cuts and arrangement are excluded for a project source. Music and voice processing
+remain independent. Output reports the project identity alongside mix measurements.
+
+`bckgrnd_presets` action `migrate` requires `name`, backs up the original as
+`.original`, and creates a musical project sidecar. The preset's voice settings
+remain untouched. Evolving arrangement settings are retained in the original and
+reported as unconverted. Existing stock-track calls keep their prior behavior.

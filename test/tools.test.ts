@@ -53,7 +53,7 @@ const hasFfmpeg = (() => {
 })();
 
 describe('the tool list', () => {
-  it('offers the eight tools', async () => {
+  it('offers the ten tools', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       'bckgrnd_beat_map',
@@ -63,7 +63,9 @@ describe('the tool list', () => {
       'bckgrnd_mix_video',
       'bckgrnd_presets',
       'bckgrnd_preview_tracks',
+      'bckgrnd_render_project',
       'bckgrnd_render_track',
+      'bckgrnd_validate_project',
     ]);
   });
 });

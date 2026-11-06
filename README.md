@@ -12,6 +12,19 @@ engine. This server runs that same engine, compiled to **WebAssembly**, in Node.
 samples, no streaming service, no licensing questions. The music is made on your
 machine when you ask for it.
 
+## Night 6 project-aware candidate
+
+`0.4.0-rc.1` adds `bckgrnd_validate_project` and `bckgrnd_render_project`, and
+`project_path` as a narration source. It uses the browser/desktop shared renderer,
+including accepted edited notes, explicit empty lanes, sustained effects and the
+selected revision. Scenes remain alternative snapshots. Narration loudness,
+ducking, mastering and encoding stay outside the project.
+
+This candidate is built from a local packed artifact; **it is not the published
+0.3.1 release below**. [Candidate setup](docs/Getting-Started.md#night-6-candidate-in-t3-code)
+uses the actual installed Node/server paths. The packed-install test exercises all
+ten local tools. Actual T3 connection and release evidence are tracked separately.
+
 ## Quick start
 
 Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
@@ -58,7 +71,7 @@ Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.1 --check`.
 Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1`.
 
 [Workflow examples](docs/Workflows.md) cover previews, presets, video exports
-and mastering. All eight tools run locally. Hosted processing adds previews,
+and mastering. All ten candidate tools run locally; the published release has its older tool set. Hosted processing adds previews,
 ducking controls, arrangements and mastering for short uploaded audio; saved
 presets, video and setup diagnostics stay local.
 
@@ -89,16 +102,17 @@ decided, what was turned down, and what would make it the wrong call later.
 | Tool | What it does |
 |---|---|
 | `bckgrnd_list_tracks` | The eighteen tracks, with bpm, mood, energy (1 to 5) and what each one suits |
+| `bckgrnd_validate_project` | Validate snapshot/schema/source/build compatibility without changing the file |
+| `bckgrnd_render_project` | Render an immutable saved revision to PCM WAV with explicit range, fades and tail |
 | `bckgrnd_render_track` | One track to a 48 kHz stereo WAV of any length, up to an hour. Cut any stems, set the fades |
 | `bckgrnd_preview_tracks` | Automatically select an audible excerpt and compare up to three tracks locally or hosted |
 | `bckgrnd_mix_under_voice` | Narration plus music to MP3/WAV, with optional presets, ducking strength, evolving arrangements and final mastering |
 | `bckgrnd_mix_video` | Synchronized MP4 export, copying the original picture (local) |
-| `bckgrnd_presets` | Save, list, retrieve and delete favorite mix settings (local) |
+| `bckgrnd_presets` | Save, list, retrieve, delete or migrate favorite mix settings with an original backup (local) |
 | `bckgrnd_check_setup` | Check dependencies, output access and the actual music engine (local) |
 | `bckgrnd_beat_map` | The exact time of every beat and bar, read from the engine, for cutting video to the music. Inline, or saved as CSV or JSON |
 
-Rendering runs about **20x faster** than real time. Seven minutes of music takes
-about eighteen seconds.
+Project outputs report measured render time, revision, build identity, duration, format, peak and RMS. Performance depends on the host and composition.
 
 ## Tech Stack
 

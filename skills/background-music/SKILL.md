@@ -2,7 +2,7 @@
 name: background-music
 description: Add background music to narration, podcasts, screen recordings or videos using the bckgrnd-msc MCP server. Compare short previews, reuse favorite settings, keep speech clear, and export audio or synchronized video. Use when someone asks to put music under a voice, add a beat to a recording, or improve a narrated MP3 or video.
 metadata:
-  version: "0.3.1"
+  version: "0.4.0-rc.1"
 ---
 
 # Background music under a voice
@@ -15,7 +15,16 @@ listener's requested track, level and workflow over the suggestions below.
 ## Connect and check
 
 Installing the skill adds instructions; connect the MCP separately. Local
-processing is the default: Node 20+, pnpm, ffmpeg and ffprobe are needed.
+processing is the default. Node 20+ runs the companion; ffmpeg and ffprobe are
+required for narration/video mixing, not standalone project WAV rendering.
+
+Night 6's project tools are in the `0.4.0-rc.1` candidate, not the published
+`0.3.1` package below. Use the tested local installation's absolute Node and
+`dist/index.js` paths from `bckgrnd_check_setup` or `--check`; do not claim an
+unpublished version can be installed from a registry. In T3 Code with Codex,
+configure that stdio command with `codex mcp add`, then reconnect the provider
+session and execute a real tool call. A CLI health check alone is not a client
+connection test. Change only this companion's configuration.
 
 Claude Code:
 ```sh
@@ -48,6 +57,21 @@ server yourself, including when local setup fails. Follow the connected tool
 schemas: older servers may lack the new tools or options.
 
 ## Choose music and preview it
+
+For a saved `.bckgrnd.json` project, first call `bckgrnd_validate_project` with
+its absolute `project_path`. Preserve the selected revision and source hash.
+Use `bckgrnd_render_project` for standalone WAV, with explicit duration, start,
+fades and tail. Use `bckgrnd_mix_under_voice` with `project_path` for narration.
+Do not replace an edited project with its factory track. Accepted patterns,
+explicitly cleared lanes, mix and sustained effects belong to the project;
+stored scenes are alternatives, not a playback sequence. Held gestures, fills,
+unaccepted previews and session-only A/B are excluded.
+
+Project rendering supports up to ten minutes plus a thirty-second effect tail,
+44.1 or 48 kHz stereo PCM WAV. Unknown versions, missing dependencies and bad
+patterns must be reported before output. Return the revision, build identity,
+file location, duration and measurements supplied by the tool. Do not silently
+migrate a user's source file or apply stock-track cuts/evolving arrangements.
 
 1. Read available narration text or the user's description; do not pretend to
    know the recording's contents when you have not heard or transcribed it.
@@ -111,8 +135,10 @@ promise of platform certification.
 
 ## Export audio or video
 
-For audio, call `bckgrnd_mix_under_voice`. Give a `voice_path` and either `track`
-or the user's `music_path`. The server renders music to the required length;
+For audio, call `bckgrnd_mix_under_voice`. Give a `voice_path` and exactly one of
+`track`, the user's `music_path`, or a validated `project_path`. Project sources
+reject explicit `cut` and `arrangement: "evolving"`; voice loudness, ducking,
+mastering and encoding remain separate settings. The server renders music to the required length;
 do not render a separate bed first. Default audio output is
 `<voice>.with-<track>.mp3`; choose an absolute `.mp3` or `.wav` `output_path`.
 Audio defaults to a two-second lead-in and a three-second tail.
@@ -157,6 +183,13 @@ When asked to remember a preferred mix, use local `bckgrnd_presets`:
 Presets are local files. They do not store narration or output paths and are
 not available on the public hosted server. Do not save preferences implicitly
 just because a listener accepted one mix.
+
+To migrate an existing preset's musical subset, use `action: "migrate"`. It
+backs up the original and writes a project sidecar while retaining all voice
+processing settings in the original preset. An evolving stock arrangement is
+reported as unconverted; it is not invented as a scene sequence. Combine the
+returned `project_path` with the original `preset` for narration: inherited
+stock track/cut/arrangement settings are excluded, voice settings remain.
 
 ## Adjust and deliver
 

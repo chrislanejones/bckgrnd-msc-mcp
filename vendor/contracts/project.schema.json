@@ -1,0 +1,585 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bckgrnd-msc.netlify.app/contracts/project.v3.schema.json",
+  "title": "bckgrnd-msc project, version 3",
+  "description": "Saved musical data only. Playback telemetry (meters, playhead, live deck) is never part of a project. Parameter ids and ranges come from contracts/parameters.json; scene slots and the scene parameters from contracts/scenes.json; lanes, the musical unit and pattern limits from contracts/patterns.json. Version 2 is the same without `locks` and with no patterns anywhere; version 1 is version 2 without `scenes`. Readers migrate both forward without changing anything that plays. Beyond this schema, readers also refuse a pattern whose events repeat an id or a step, or whose lane key and `lane` disagree.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "name",
+    "trackId",
+    "params",
+    "stems",
+    "patterns",
+    "locks",
+    "scenes"
+  ],
+  "properties": {
+    "format": {
+      "const": "bckgrnd-msc/project"
+    },
+    "version": {
+      "const": 3
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "trackId": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "params": {
+      "description": "Project-scoped parameters keyed by their id in parameters.json. A missing key means the parameter's default.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(transport|master|fx)\\.[A-Za-z]+$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "stems": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kick": {
+          "$ref": "#/$defs/stem"
+        },
+        "clap": {
+          "$ref": "#/$defs/stem"
+        },
+        "hats": {
+          "$ref": "#/$defs/stem"
+        },
+        "bass": {
+          "$ref": "#/$defs/stem"
+        },
+        "stab": {
+          "$ref": "#/$defs/stem"
+        },
+        "lead": {
+          "$ref": "#/$defs/stem"
+        },
+        "pad": {
+          "$ref": "#/$defs/stem"
+        },
+        "arp": {
+          "$ref": "#/$defs/stem"
+        }
+      }
+    },
+    "patterns": {
+      "description": "Lane overrides. A lane absent here plays the track's factory lane; a lane present with no events plays nothing.",
+      "$ref": "#/$defs/patternMap"
+    },
+    "locks": {
+      "$ref": "#/$defs/locks"
+    },
+    "scenes": {
+      "description": "Four stored scene snapshots. Complete on disk. A malformed scene refuses the whole set. Which scene is active is session state and is never saved.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slots"
+      ],
+      "properties": {
+        "slots": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/scene",
+              "properties": {
+                "slot": {
+                  "const": "full"
+                }
+              }
+            },
+            {
+              "$ref": "#/$defs/scene",
+              "properties": {
+                "slot": {
+                  "const": "sparse"
+                }
+              }
+            },
+            {
+              "$ref": "#/$defs/scene",
+              "properties": {
+                "slot": {
+                  "const": "build"
+                }
+              }
+            },
+            {
+              "$ref": "#/$defs/scene",
+              "properties": {
+                "slot": {
+                  "const": "drop"
+                }
+              }
+            }
+          ],
+          "items": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "send": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "muted": {
+          "type": "boolean"
+        },
+        "solo": {
+          "type": "boolean"
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot",
+        "name",
+        "factory",
+        "revision",
+        "params",
+        "stems",
+        "patterns"
+      ],
+      "properties": {
+        "slot": {
+          "enum": [
+            "full",
+            "sparse",
+            "build",
+            "drop"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "factory": {
+          "enum": [
+            "full",
+            "sparse",
+            "build",
+            "drop"
+          ],
+          "description": "The recipe in contracts/scenes.json that Reset to Factory restores."
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fx.filter",
+            "fx.filterQ",
+            "fx.low",
+            "fx.mid",
+            "fx.high",
+            "fx.echoTime",
+            "fx.echoFeedback",
+            "fx.echoReturn",
+            "fx.reverbMix",
+            "fx.reverbDecay",
+            "fx.width",
+            "fx.stereo"
+          ],
+          "properties": {
+            "fx.filter": {
+              "type": "number"
+            },
+            "fx.filterQ": {
+              "type": "number"
+            },
+            "fx.low": {
+              "type": "number"
+            },
+            "fx.mid": {
+              "type": "number"
+            },
+            "fx.high": {
+              "type": "number"
+            },
+            "fx.echoTime": {
+              "type": "number"
+            },
+            "fx.echoFeedback": {
+              "type": "number"
+            },
+            "fx.echoReturn": {
+              "type": "number"
+            },
+            "fx.reverbMix": {
+              "type": "number"
+            },
+            "fx.reverbDecay": {
+              "type": "number"
+            },
+            "fx.width": {
+              "type": "number"
+            },
+            "fx.stereo": {
+              "type": "number"
+            }
+          },
+          "description": "Exactly the scene parameters (sceneVector), each inside its registry range."
+        },
+        "stems": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kick",
+            "clap",
+            "hats",
+            "bass",
+            "stab",
+            "lead",
+            "pad",
+            "arp"
+          ],
+          "properties": {
+            "kick": {
+              "$ref": "#/$defs/sceneStem"
+            },
+            "clap": {
+              "$ref": "#/$defs/sceneStem"
+            },
+            "hats": {
+              "$ref": "#/$defs/sceneStem"
+            },
+            "bass": {
+              "$ref": "#/$defs/sceneStem"
+            },
+            "stab": {
+              "$ref": "#/$defs/sceneStem"
+            },
+            "lead": {
+              "$ref": "#/$defs/sceneStem"
+            },
+            "pad": {
+              "$ref": "#/$defs/sceneStem"
+            },
+            "arp": {
+              "$ref": "#/$defs/sceneStem"
+            }
+          }
+        },
+        "patterns": {
+          "description": "Lanes this scene sets when it launches: a pinned pattern, or {\"factory\": true}. A lane absent is left alone by a launch.",
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "kick",
+              "clap",
+              "hat",
+              "hatOpen",
+              "bass",
+              "stab",
+              "lead",
+              "pad",
+              "arp"
+            ]
+          },
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/pattern"
+              },
+              {
+                "$ref": "#/$defs/factoryRef"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "sceneStem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "volume",
+        "send",
+        "muted",
+        "solo"
+      ],
+      "properties": {
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "send": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "muted": {
+          "type": "boolean"
+        },
+        "solo": {
+          "type": "boolean"
+        }
+      }
+    },
+    "patternMap": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "kick",
+          "clap",
+          "hat",
+          "hatOpen",
+          "bass",
+          "stab",
+          "lead",
+          "pad",
+          "arp"
+        ]
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/pattern"
+      }
+    },
+    "factoryRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "factory"
+      ],
+      "properties": {
+        "factory": {
+          "const": true
+        }
+      }
+    },
+    "pattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision",
+        "lane",
+        "length",
+        "events"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lane": {
+          "enum": [
+            "kick",
+            "clap",
+            "hat",
+            "hatOpen",
+            "bass",
+            "stab",
+            "lead",
+            "pad",
+            "arp"
+          ]
+        },
+        "length": {
+          "const": 256,
+          "description": "Sixteenths: the 16-bar song."
+        },
+        "events": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/drumEvent"
+              },
+              {
+                "$ref": "#/$defs/noteEvent"
+              }
+            ]
+          }
+        },
+        "origin": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "edit",
+                "paste",
+                "humanize",
+                "variation",
+                "scene"
+              ]
+            }
+          },
+          "description": "Provenance: for a variation or humanize, the generator, its version, the seed, the settings and the source revision. The resulting events are stored, so a later generator never changes a saved pattern."
+        }
+      }
+    },
+    "drumEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "step",
+        "vel"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,24}$"
+        },
+        "step": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Sixteenth of the song."
+        },
+        "vel": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "noteEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "step",
+        "notes",
+        "len",
+        "vel",
+        "accent"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,24}$"
+        },
+        "step": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Sixteenth of the song."
+        },
+        "notes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 127
+          }
+        },
+        "len": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Sixteenths; step + len must be at most 256."
+        },
+        "vel": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "accent": {
+          "type": "boolean"
+        }
+      }
+    },
+    "locks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lanes",
+        "events"
+      ],
+      "properties": {
+        "lanes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "kick",
+              "clap",
+              "hat",
+              "hatOpen",
+              "bass",
+              "stab",
+              "lead",
+              "pad",
+              "arp"
+            ]
+          }
+        },
+        "events": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "kick",
+              "clap",
+              "hat",
+              "hatOpen",
+              "bass",
+              "stab",
+              "lead",
+              "pad",
+              "arp"
+            ]
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,24}$"
+            }
+          }
+        }
+      }
+    }
+  }
+}
