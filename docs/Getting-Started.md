@@ -35,7 +35,7 @@ codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1
 ```
 
 The skill and MCP connection are separate. Restart the client if newly added
-tools do not appear. Check configured entries with `codex mcp list`.
+tools do not appear. Inspect this entry with `codex mcp get bckgrnd-msc`.
 
 ### Claude Desktop, Cursor and other JSON configs
 
@@ -153,3 +153,7 @@ ffmpeg for the MCP client. Project WAV rendering needs Node 20+; narration/video
 also need ffmpeg and ffprobe accessible to that configured process. A missing
 executable returns a useful limitation and leaves standalone rendering usable.
 No local failure uploads narration to the hosted service.
+
+See [the Night 6 record](Night6-Release.md) for the tested bundle and remaining
+client gate. Installing the desktop application does not install Node or ffmpeg
+for an external MCP client.

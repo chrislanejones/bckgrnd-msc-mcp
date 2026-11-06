@@ -161,3 +161,5 @@ come out at the same level. The `background-music` skill matches tracks to conte
 ## License
 
 MIT
+
+Current candidate evidence: [Night 6 release record](docs/Night6-Release.md).

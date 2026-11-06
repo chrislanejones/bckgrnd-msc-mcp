@@ -1,5 +1,12 @@
 # Change Summary
 
+## 2026-11-06 — Night 6 local release candidate
+
+Saved-project validation/rendering, project narration, complete atomic bundle sync,
+packed contracts/fixtures and preset migration with original backups. The ten-tool
+package passes clean-install tests. Actual T3 discovery and installed-app listening
+remain separate open gates; see [Night 6 evidence](Night6-Release.md).
+
 ## Unreleased
 
 - New `bckgrnd_beat_map` tool, local and hosted: the exact time of every beat and bar of a track, with bar and beat numbers, for cutting video or timing animation to the music.
