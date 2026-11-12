@@ -12,7 +12,7 @@ import { toolJob } from './jobs.js';
 
 export async function checkSetup(job: JobOptions = {}) {
   const checks: Array<{ name: string; ok: boolean; detail: string }> = [];
-  checks.push({ name: 'Node.js', ok: Number(process.versions.node.split('.')[0]) >= 20, detail: process.version });
+  checks.push({ name: 'Node.js', ok: Number(process.versions.node.split('.')[0]) >= 22, detail: process.version });
   for (const name of ['ffmpeg', 'ffprobe']) {
     try {
       const { stdout } = await tool(process.env[name === 'ffmpeg' ? 'FFMPEG_PATH' : 'FFPROBE_PATH'] || name, ['-version'], job);

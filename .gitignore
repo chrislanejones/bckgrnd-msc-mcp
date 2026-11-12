@@ -11,3 +11,5 @@ vendor/runtime/
 
 .vendor-stage-*
 .vendor-previous
+.agents/
+.playwright-mcp/

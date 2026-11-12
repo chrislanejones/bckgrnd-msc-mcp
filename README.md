@@ -27,7 +27,7 @@ ten local tools. Actual T3 connection and release evidence are tracked separatel
 
 ## Quick start
 
-Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
+Needs Node 22 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
 Use the local server by default, pinned to version 0.3.1:
@@ -117,7 +117,7 @@ Project outputs report measured render time, revision, build identity, duration,
 ## Tech Stack
 
 - **Rust → WebAssembly**: the bckgrnd-msc engine, built with `wasm-pack`, copied into `vendor/`
-- **TypeScript** on **Node 20+**: the server
+- **TypeScript** on **Node 22+**: the server
 - **MCP TypeScript SDK**: the protocol, over stdio
 - **Zod**: tool argument checking
 - **ffmpeg**: loudness measuring (`ebur128`), ducking (`sidechaincompress`) and MP3 encoding

@@ -4,7 +4,7 @@
 
 | Need | Why | Install |
 |---|---|---|
-| Node 20 or newer | Runs the server | [nodejs.org](https://nodejs.org/) |
+| Node 22 or newer | Runs the server | [nodejs.org](https://nodejs.org/) |
 | ffmpeg and ffprobe | For mixing and previews. Rendering a track on its own doesn't need them | See below |
 
 | System | ffmpeg |
@@ -149,7 +149,7 @@ not this client test. Keep stdout reserved for protocol messages; logs use stder
 Use local stdio; no network bridge is needed.
 
 The desktop bundles its own PHP/Electron/audio assets. It does not install Node or
-ffmpeg for the MCP client. Project WAV rendering needs Node 20+; narration/video
+ffmpeg for the MCP client. Project WAV rendering needs Node 22+; narration/video
 also need ffmpeg and ffprobe accessible to that configured process. A missing
 executable returns a useful limitation and leaves standalone rendering usable.
 No local failure uploads narration to the hosted service.

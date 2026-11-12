@@ -16,8 +16,6 @@ Adjacent problems and ideas found during other work. Not scheduled.
 - Publish from GitHub Actions with npm trusted publishing (provenance badge, no local token or 2FA prompt).
 - Drop the pinned `@0.3.1` from README and skill install commands so releases don't need doc edits.
 - List the server in the official MCP Registry (`server.json` + `mcpName`).
-- Raise `engines.node` to `>=22` (Node 20 reached end of life on 04-30-2026).
-- Gitignore `.agents/` and `.playwright-mcp/` so `pnpm publish` works without `--no-git-checks`.
 - Article + music in one ask: smart-voice MP3, then `bckgrnd_mix_under_voice`.
 - Change track or energy at section breaks in a long narration.
 - End on a bar line with a real ending instead of a fade.

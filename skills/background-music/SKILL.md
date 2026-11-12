@@ -15,7 +15,7 @@ listener's requested track, level and workflow over the suggestions below.
 ## Connect and check
 
 Installing the skill adds instructions; connect the MCP separately. Local
-processing is the default. Node 20+ runs the companion; ffmpeg and ffprobe are
+processing is the default. Node 22+ runs the companion; ffmpeg and ffprobe are
 required for narration/video mixing, not standalone project WAV rendering.
 
 Night 6's project tools are in the `0.4.0-rc.1` candidate, not the published
