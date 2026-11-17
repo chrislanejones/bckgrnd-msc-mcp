@@ -115,7 +115,7 @@ export function createRemoteServer(): McpServer {
   });
   server.registerTool('bckgrnd_list_tracks', {
     description: 'List tracks, moods, energy, tempo and stems. Use this before selecting music.',
-    inputSchema: { section: z.enum(['EDM', 'Lofi', 'Breaks']).optional(), max_energy: z.number().int().min(1).max(5).optional() },
+    inputSchema: { section: z.enum(['EDM', 'Hip-hop', 'Lofi', 'Breaks']).optional(), max_energy: z.number().int().min(1).max(5).optional() },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   }, (args) => localCall('bckgrnd_list_tracks', args));
 

@@ -27,7 +27,7 @@ try {
   const stamp = { repository: 'https://github.com/chrislanejones/bckgrnd-msc', commit: manifest.appCommit, dirty: dirty || manifest.dirty, buildId: manifest.buildId, renderer: manifest.renderer, projectVersion: 3, snapshotVersion: 1, files };
   const runtime = await import(pathToFileURL(join(stage, 'shared/runtime.js')).href);
   const library = JSON.parse(readFileSync(join(stage, 'library/index.json'), 'utf8'));
-  if (runtime.RENDERER_VERSION !== stamp.renderer || library.tracks.length !== 18) throw new Error('Bundle contract/library validation failed.');
+  if (runtime.RENDERER_VERSION !== stamp.renderer || library.tracks.length !== 20) throw new Error('Bundle contract/library validation failed.');
   const { Engine, initSync } = await import(pathToFileURL(join(stage, 'engine/bckgrnd_msc_engine.js')).href);
   initSync({ module: readFileSync(join(stage, 'engine/bckgrnd_msc_engine_bg.wasm')) });
   const engine = new Engine(48000);

@@ -19,4 +19,9 @@ export type Snapshot = {
 export declare function canonical(value: unknown): string;
 export declare function contentHash(value: unknown): Promise<string>;
 export declare function snapshotOf(project: Project, source: TrackArrangement, id: string, revision: number): Promise<Snapshot>;
-export declare function readSnapshot(raw: unknown, tracks: TrackSummary[], source: (id: string) => Promise<TrackArrangement>): Promise<Snapshot>;
+/**
+ * The source hash says which library data a project was saved against. A render has to
+ * reproduce that exactly, so without `onSourceChanged` a different library is refused.
+ * The app passes it: a library update must not lock anyone out of their own work.
+ */
+export declare function readSnapshot(raw: unknown, tracks: TrackSummary[], source: (id: string) => Promise<TrackArrangement>, onSourceChanged?: (trackId: string) => void): Promise<Snapshot>;
