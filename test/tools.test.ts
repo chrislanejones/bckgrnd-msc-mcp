@@ -144,6 +144,13 @@ describe('bckgrnd_render_track', () => {
     expect(text).toContain('absolute');
   });
 
+  it('says plainly when the output folder does not exist', async () => {
+    const { isError, text } = await call('bckgrnd_render_track', { track: 'rain', seconds: 1, output_path: '/tmp/bckgrnd-no-such-folder-xyz/out.wav' });
+    expect(isError).toBe(true);
+    expect(text).toContain("doesn't exist");
+    expect(text).not.toContain('ENOENT');
+  });
+
   it('will not replace a file unless told to', async () => {
     const path = join(dir, 'keep.wav');
     writeFileSync(path, 'mine');
