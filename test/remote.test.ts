@@ -28,7 +28,7 @@ it('lists tools over real stateless HTTP without filesystem inputs', async () =>
   expect(JSON.stringify(tools)).not.toContain('output_path');
   const result = await client.callTool({ name: 'bckgrnd_list_tracks', arguments: {} });
   expect(result.isError).not.toBe(true);
-  expect(((result.structuredContent as Record<string, unknown>)?.tracks as unknown[]).length).toBe(18);
+  expect(((result.structuredContent as Record<string, unknown>)?.tracks as unknown[]).length).toBe(20);
 });
 
 it('renders decodable MP3 audio over HTTP', async () => {

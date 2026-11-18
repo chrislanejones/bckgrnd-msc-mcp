@@ -947,7 +947,7 @@ async function snapshotOf(project, source, id, revision) {
     project: copy
   };
 }
-async function readSnapshot(raw, tracks, source) {
+async function readSnapshot(raw, tracks, source, onSourceChanged) {
   const doc = raw;
   if (!doc || typeof doc !== "object") throw new Error("A project file must be a JSON object.");
   const wrapped = doc.format === "bckgrnd-msc/snapshot";
@@ -964,7 +964,11 @@ async function readSnapshot(raw, tracks, source) {
   if (wrapped && canonical(project) !== canonical(doc.project)) throw new Error("Project contains unsupported fields or invalid parameter values.");
   const arranged = await source(project.trackId);
   const hash = await contentHash(arranged);
-  if (wrapped && (doc.source?.trackId !== project.trackId || doc.source.sha256 !== hash)) throw new Error(`Source library mismatch for ${project.trackId}. Install the matching library before opening or rendering this project.`);
+  if (wrapped && doc.source?.trackId !== project.trackId) throw new Error(`Source library mismatch for ${project.trackId}. The file names a different track than its project.`);
+  if (wrapped && doc.source?.sha256 !== hash) {
+    if (!onSourceChanged) throw new Error(`Source library mismatch for ${project.trackId}. Install the matching library before opening or rendering this project.`);
+    onSourceChanged(project.trackId);
+  }
   return wrapped ? structuredClone(doc) : snapshotOf(project, arranged, crypto.randomUUID(), 1);
 }
 

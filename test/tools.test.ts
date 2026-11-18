@@ -71,9 +71,9 @@ describe('the tool list', () => {
 });
 
 describe('bckgrnd_list_tracks', () => {
-  it('lists all eighteen tracks and the eight stems', async () => {
+  it('lists all twenty tracks and the eight stems', async () => {
     const { data } = await call('bckgrnd_list_tracks', {});
-    expect((data.tracks as unknown[]).length).toBe(18);
+    expect((data.tracks as unknown[]).length).toBe(20);
     expect(data.stems).toEqual(['kick', 'clap', 'hats', 'bass', 'stab', 'lead', 'pad', 'arp']);
   });
 
@@ -81,6 +81,13 @@ describe('bckgrnd_list_tracks', () => {
     const { data } = await call('bckgrnd_list_tracks', {});
     const tracks = data.tracks as Array<{ mood: string; energy: number; good_for: string[] }>;
     expect(tracks.every((t) => t.mood !== 'unrated' && t.good_for.length > 0)).toBe(true);
+  });
+
+  it('lists the two hip-hop tracks in their own section', async () => {
+    const { data } = await call('bckgrnd_list_tracks', { section: 'Hip-hop' });
+    const tracks = data.tracks as Array<{ id: string; bpm: number; section: string; mood: string }>;
+    expect(tracks.map((t) => t.id).sort()).toEqual(['boulevard', 'cipher']);
+    expect(tracks.every((t) => t.section === 'Hip-hop' && t.bpm >= 100 && t.mood !== 'unrated')).toBe(true);
   });
 
   it('filters by energy', async () => {
@@ -135,6 +142,13 @@ describe('bckgrnd_render_track', () => {
     const { isError, text } = await call('bckgrnd_render_track', { track: 'rain', seconds: 1, output_path: 'out.wav' });
     expect(isError).toBe(true);
     expect(text).toContain('absolute');
+  });
+
+  it('says plainly when the output folder does not exist', async () => {
+    const { isError, text } = await call('bckgrnd_render_track', { track: 'rain', seconds: 1, output_path: '/tmp/bckgrnd-no-such-folder-xyz/out.wav' });
+    expect(isError).toBe(true);
+    expect(text).toContain("doesn't exist");
+    expect(text).not.toContain('ENOENT');
   });
 
   it('will not replace a file unless told to', async () => {

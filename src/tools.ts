@@ -46,12 +46,12 @@ export function registerTools(server: McpServer): void {
 Every track is a 16-bar loop with eight stems: ${STEMS.join(', ')}. Energy runs 1 (barely there) to 5 (wants attention). Under dense speech, stay at energy 1-2; the Lofi tracks are energy 1.
 
 Args:
-  - section ('EDM' | 'Lofi' | 'Breaks', optional): only list one section
+  - section ('EDM' | 'Hip-hop' | 'Lofi' | 'Breaks', optional): only list one section
   - max_energy (1-5, optional): only list tracks at or below this energy
 
 Returns: { tracks: [{ id, name, section, style, bpm, kind, mood, energy, good_for }], stems: string[] }`,
       inputSchema: {
-        section: z.enum(['EDM', 'Lofi', 'Breaks']).optional().describe('Only list tracks from this section'),
+        section: z.enum(['EDM', 'Hip-hop', 'Lofi', 'Breaks']).optional().describe('Only list tracks from this section'),
         max_energy: z.number().int().min(1).max(5).optional().describe('Only list tracks at or below this energy'),
       },
       outputSchema: {

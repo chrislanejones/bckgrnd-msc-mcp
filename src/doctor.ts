@@ -28,7 +28,7 @@ export async function checkSetup(job: JobOptions = {}) {
     checks.push({ name: 'output folder', ok: true, detail: defaultOutDir() });
     const tracks = listTracks();
     const rendered = await renderTrack({ ...job, track: findTrack('rain')!, seconds: 0.5, outputPath: join(scratch, 'engine.wav') });
-    checks.push({ name: 'music engine', ok: tracks.length === 18 && rendered.peak_dbfs > -70, detail: `${tracks.length} tracks; WASM rendered a short audio check.` });
+    checks.push({ name: 'music engine', ok: tracks.length === 20 && rendered.peak_dbfs > -70, detail: `${tracks.length} tracks; WASM rendered a short audio check.` });
   } catch (error) { checks.push({ name: scratch ? 'music engine' : 'output folder', ok: false, detail: (error as Error).message }); }
   finally { if (scratch) rmSync(scratch, { recursive: true, force: true }); }
   return { ok: checks.every((c) => c.ok), checks,

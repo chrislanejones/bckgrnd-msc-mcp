@@ -6,11 +6,11 @@ instead. No tool replaces an existing file unless you pass `overwrite: true`.
 
 ## `bckgrnd_list_tracks`
 
-The eighteen tracks with tempo, mood, energy and what each one suits. Read-only.
+The twenty tracks with tempo, mood, energy and what each one suits. Read-only.
 
 | Argument | Type | Default | What it does |
 |---|---|---|---|
-| `section` | `EDM`, `Lofi` or `Breaks` | all | Only list one section |
+| `section` | `EDM`, `Hip-hop`, `Lofi` or `Breaks` | all | Only list one section |
 | `max_energy` | 1 to 5 | all | Only list tracks at or below this energy |
 
 Returns `{ tracks: [{ id, name, section, style, bpm, kind, mood, energy, good_for }], stems }`.

@@ -8,7 +8,7 @@ metadata:
 # Background music under a voice
 
 Use the bckgrnd-msc MCP server to choose music, compare it under actual speech,
-and export a mix. The server synthesizes eighteen tracks with eight stems;
+and export a mix. The server synthesizes twenty tracks with eight stems;
 ffmpeg measures levels and lowers music while the voice talks. Respect the
 listener's requested track, level and workflow over the suggestions below.
 
@@ -98,6 +98,7 @@ migrate a user's source file or apply stock-track cuts/evolving arrangements.
 | Tech, science and analysis | drive, glass | lead |
 | News, updates and demos | warehouse, basement, tunnel | lead, arp |
 | Sports and light commentary | southside, pirate | lead |
+| Podcasts, interviews and vlogs | cipher, boulevard | lead |
 | Fast recaps | lowtide, slipstream | lead, hats |
 | Trailers and gaming | bricks, ravetape, acid | none |
 
