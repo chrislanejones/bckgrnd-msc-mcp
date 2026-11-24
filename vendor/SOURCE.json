@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/chrislanejones/bckgrnd-msc",
-  "commit": "5fed84be0ec395e4c41153480db90ca901f9165e",
+  "commit": "7b2741bf70e29e72c945ef6b508030203c236911",
   "dirty": false,
-  "buildId": "461385858788f2cda29b9ec00aabde69a8b9ac5ae73b7059f2e50c5a8b78675a",
+  "buildId": "c489a77d285c68dea07caa54b6699d294bdf6f99e5a057d94fcb8020cc7ecaca",
   "renderer": "project-renderer-1",
   "projectVersion": 4,
   "snapshotVersion": 1,
@@ -129,7 +129,7 @@
     "shared/types/frontend/lib/contract.d.ts": "6c38469950d98ba099e9c3faee0b6f1444d6437eb9af77649a5a65469ce7a9d5",
     "shared/types/frontend/lib/patterns.d.ts": "d66d6f0c1dc3c4f1e48cbc2936b07a6c2aa356739cea72acc0fdb8ef64a8f4b2",
     "shared/types/frontend/lib/project-renderer.d.ts": "b6940f88e5436bc4dc9f915456d7af4d944f60dd6b02f1e12267fd6be49ec36e",
-    "shared/types/frontend/lib/scenes.d.ts": "60e89a87243d340871f5f59f13d636784fb42ee251e39fd8e9ddb26d9299a2de",
+    "shared/types/frontend/lib/scenes.d.ts": "9570c284c3c3ca48938f6f3f5d8b734207c249ad89be0a65d862b3576e5cea6a",
     "shared/types/frontend/lib/shared.d.ts": "04d438cbb0b24b9b1ffe236c87c7922cfa8e5685feb393b066ac5d54816a84f2",
     "shared/types/frontend/lib/snapshot.d.ts": "67db24b134f3d2590ac72d3af62fb09848fc168e5ded11f1a7ab35002d8f40c6",
     "shared/types/frontend/lib/types.d.ts": "2852ba298aec22cfd63c71b5e42918d0eb3974422ec8ec88215bd365aec4d21d"

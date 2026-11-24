@@ -250,6 +250,17 @@ export declare function bookFind(book: RequestBook, id: number): SceneRequest | 
 export declare function bookBuild(book: RequestBook): SceneRequest | null;
 /** A request's record replaced by `next` (same id), wherever the book holds it. */
 export declare function bookUpdate(book: RequestBook, next: SceneRequest): RequestBook;
+/**
+ * Everything pending cancelled at once by the engine, for `reason` (Panic, an
+ * auto-mix): the book empties and the shown request reads cancelled. `closing` is the
+ * Rise among them, if one was waiting or running, even under a scene queued after it:
+ * the engine still sends the base it restores as it cancels, and the knobs must follow
+ * that base back although the Rise is no longer in the book.
+ */
+export declare function bookCancelAll(book: RequestBook, reason: number): {
+    book: RequestBook;
+    closing: SceneRequest | null;
+};
 /** What one engine event did to the book. */
 export type BookStep = {
     book: RequestBook;
