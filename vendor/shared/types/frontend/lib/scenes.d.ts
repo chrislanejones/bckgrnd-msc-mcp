@@ -26,6 +26,22 @@ export type SceneMix = {
 export declare const SCENE_VECTOR_LENGTH: number;
 /** The engine's scene vector for a mix (layout in docs/NIGHT3_PROTOCOL.md). */
 export declare function sceneVector(mix: SceneMix): Float32Array;
+/**
+ * A mix laid out like the engine's scene vector, but in the store's own doubles. The
+ * engine's copy (`sceneVector`) is float32; this is what those floats came from.
+ */
+export declare function sceneValues(mix: SceneMix): number[];
+/**
+ * An engine vector read back without its float32 rounding, wherever the engine is
+ * only holding a value the host gave it. Each slot takes the first of `known` (mixes
+ * as `sceneValues`) whose float32 is exactly the engine's; a slot that matches none
+ * (a build part way between two values) keeps the engine's number.
+ *
+ * Without this, following a build wrote float32 into the store: Echo time 1/8T came
+ * back as 0.3333333432674408, which is not one of the registry's options, so a
+ * project saved after it would not open again.
+ */
+export declare function exactValues(engine: ArrayLike<number>, known: readonly (readonly number[])[]): number[];
 /** A copy of just the scene part of a mix, so later edits cannot reach a snapshot. */
 export declare function copyMix(mix: SceneMix): SceneMix;
 /** Whether two mixes sound the same as far as a scene is concerned. */
@@ -208,5 +224,50 @@ export declare function accentStatus(name: string, b: number): string | null;
 export declare const isLaunchEvent: (kind: number) => boolean;
 /** A pending request is one the engine may still apply. */
 export declare const isPending: (r: SceneRequest | null) => r is SceneRequest;
+/**
+ * The host's record of its launches, one per request id. The engine settles every
+ * request with exactly one of applied, cancelled, replaced or refused
+ * (docs/NIGHT7_PROTOCOL.md), so each pending one is kept until its own outcome
+ * arrives. The host never guesses what a newer request did to an older one: a refused
+ * or cancelled newer request leaves an older one pending, and a scene queued over a
+ * running Rise only replaces the Rise if it commits.
+ */
+export type RequestBook = {
+    /** Every request the engine may still apply, oldest first. */
+    pending: readonly SceneRequest[];
+    /**
+     * The request the pads, Cancel and the status line speak for: the newest sent, or,
+     * once that one settles without landing, the newest still pending. Null before any.
+     */
+    shown: SceneRequest | null;
+};
+export declare const EMPTY_BOOK: RequestBook;
+/** A request just sent: it is the one shown, and every older pending one is kept. */
+export declare function bookSend(book: RequestBook, request: SceneRequest): RequestBook;
+/** The pending request with this id, or the shown one if it has it. */
+export declare function bookFind(book: RequestBook, id: number): SceneRequest | null;
+/** The newest pending timed build, if one is running or waiting. */
+export declare function bookBuild(book: RequestBook): SceneRequest | null;
+/** A request's record replaced by `next` (same id), wherever the book holds it. */
+export declare function bookUpdate(book: RequestBook, next: SceneRequest): RequestBook;
+/** What one engine event did to the book. */
+export type BookStep = {
+    book: RequestBook;
+    /** The request the event was about, before and after. Equal when nothing moved. */
+    prev: SceneRequest | null;
+    next: SceneRequest | null;
+    /** Whether that request was the one shown. */
+    wasShown: boolean;
+    /**
+     * An older request shown again because the shown one settled without landing:
+     * the engine is still running it.
+     */
+    resumed: SceneRequest | null;
+};
+/**
+ * Fold one launch event (kinds 1-5, 41-47) into the book. An event for a request the
+ * book does not hold, or one that moves nothing, returns the book unchanged.
+ */
+export declare function foldBookEvent(book: RequestBook, event: EngineEvent): BookStep;
 /** The inverse of `sceneVector`: the mix a 44-value engine vector describes. */
 export declare function mixFromVector(values: ArrayLike<number>): SceneMix;
