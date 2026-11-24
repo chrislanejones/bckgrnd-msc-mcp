@@ -10,11 +10,23 @@ import { toolJob, type JobOptions } from './jobs.js';
 
 const vendor = new URL('../vendor/', import.meta.url);
 const sha = (s: string | Uint8Array) => createHash('sha256').update(s).digest('hex');
-type Bundle = { commit: string; dirty: boolean; buildId: string; renderer: string; files: Record<string, string> };
+type Bundle = { commit: string; dirty: boolean; buildId: string; renderer: string; projectVersion: number; snapshotVersion: number; files: Record<string, string> };
+/** The newest project version the vendored contracts (and shared runtime) read. */
+export function supportedProjectVersion(): number {
+  const schema = JSON.parse(readFileSync(new URL('contracts/project.schema.json', vendor), 'utf8')) as { properties?: { version?: { const?: unknown } } };
+  const version = schema.properties?.version?.const;
+  if (typeof version !== 'number' || !Number.isInteger(version)) throw new Error('Vendored project contract has no version. Reinstall the complete MCP package.');
+  return version;
+}
+/** The project version as written in the file, before any migrate-on-read step. */
+function storedVersion(raw: unknown): unknown {
+  const doc = raw as { format?: unknown; version?: unknown; project?: { version?: unknown } } | null;
+  return doc?.format === 'bckgrnd-msc/snapshot' ? doc.project?.version : doc?.version;
+}
 
 export function verifyProjectBundle(): Bundle {
   const stamp = JSON.parse(readFileSync(new URL('SOURCE.json', vendor), 'utf8')) as Bundle;
-  if (stamp.renderer !== RENDERER_VERSION || !stamp.buildId || !stamp.files) throw new Error('Project renderer bundle is incomplete. Reinstall the complete MCP package.');
+  if (stamp.renderer !== RENDERER_VERSION || !stamp.buildId || !stamp.files || stamp.projectVersion !== supportedProjectVersion()) throw new Error('Project renderer bundle is incomplete. Reinstall the complete MCP package.');
   for (const [file, hash] of Object.entries(stamp.files)) {
     if (!/^(engine|library|contracts|shared|fixtures)\//.test(file) || file.includes('..')) throw new Error('Invalid bundle path in SOURCE.json.');
     if (sha(readFileSync(new URL(file, vendor))) !== hash) throw new Error(`Bundle mismatch: ${file}. Reinstall the matching engine, library and contracts.`);
@@ -28,13 +40,18 @@ export async function loadProject(projectPath: string) {
   const bundle = verifyProjectBundle();
   const library = JSON.parse(readFileSync(new URL('library/index.json', vendor), 'utf8')) as { tracks: TrackSummary[] };
   let source: TrackArrangement | undefined;
-  const snapshot = await readSnapshot(JSON.parse(readFileSync(projectPath, 'utf8')), library.tracks, async (id) => {
+  const raw: unknown = JSON.parse(readFileSync(projectPath, 'utf8'));
+  // The shared runtime reads v1-v4 exactly as the app does (older versions migrate
+  // in memory, v3 scenes gain crash: false) and refuses anything newer. The file
+  // itself is never rewritten.
+  const snapshot = await readSnapshot(raw, library.tracks, async (id) => {
     if (!library.tracks.some((t) => t.id === id)) throw new Error(`Unavailable source dependency: ${id}.`);
     source = JSON.parse(readFileSync(new URL(`library/${id}.json`, vendor), 'utf8')).track as TrackArrangement;
     return source;
   });
   return { snapshot, source: source!, bundle, identity: {
-    project_id: snapshot.id, project_revision: snapshot.revision, project_sha256: sha(canonical(snapshot.project)),
+    project_id: snapshot.id, project_revision: snapshot.revision, schema_version: snapshot.project.version, stored_schema_version: storedVersion(raw) as number,
+    project_sha256: sha(canonical(snapshot.project)),
     renderer: RENDERER_VERSION, build_id: bundle.buildId, app_commit: bundle.commit,
     resolved_events_sha256: sha(canonical(resolvedArrangement(source!, snapshot.project.patterns))),
     source_sha256: snapshot.source.sha256,
@@ -76,21 +93,22 @@ export async function renderSavedProject(project: LoadedProject, settings: Rende
 }
 
 export function registerProjects(server: McpServer) {
+  const current = supportedProjectVersion();
   server.registerTool('bckgrnd_validate_project', {
     title: 'Validate a saved musical project',
-    description: 'Validate an immutable saved project, supported schema, source content hash and renderer assets without changing it. Scenes remain alternatives. Held effects, previews and A/B are excluded. Returns revision, build identity and resolved event hash.',
+    description: `Validate an immutable saved project, supported schema, source content hash and renderer assets without changing it. Reads project versions 1-${current}; an older version is migrated in memory exactly as the app does (stored_schema_version reports what the file says), a newer one is refused. Scenes remain alternatives. Held effects, previews and A/B are excluded. Returns revision, build identity and resolved event hash.`,
     inputSchema: { project_path: z.string().min(1) },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }, async ({ project_path }) => {
     try {
       const p = await loadProject(project_path);
-      const result = { valid: true, ...p.identity, name: p.snapshot.project.name, schema_version: p.snapshot.project.version };
+      const result = { valid: true, ...p.identity, name: p.snapshot.project.name };
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: result };
     } catch (e) { return { isError: true, content: [{ type: 'text', text: (e as Error).message }] }; }
   });
   server.registerTool('bckgrnd_render_project', {
     title: 'Render the saved project revision to WAV',
-    description: 'Render accepted notes, explicit empty lanes, mix and sustained effects using the shared browser/desktop renderer. Does not launch stored scenes or apply stock-track cuts/evolving arrangements. Range, fades and tail are explicit; no ffmpeg is needed. Output is atomic and cancelled renders publish no partial file.',
+    description: 'Render accepted notes, explicit empty lanes, mix and sustained effects using the shared browser/desktop renderer. Does not launch stored scenes (so a scene crash accent never plays) or apply stock-track cuts/evolving arrangements. Range, fades and tail are explicit; no ffmpeg is needed. Output is atomic and cancelled renders publish no partial file.',
     inputSchema: {
       project_path: z.string().min(1), seconds: z.number().positive().max(600), start_seconds: z.number().min(0).max(600).default(0),
       fade_in_seconds: z.number().min(0).max(600).default(0), fade_out_seconds: z.number().min(0).max(600).default(0.02),

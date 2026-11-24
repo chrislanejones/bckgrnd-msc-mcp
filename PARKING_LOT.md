@@ -11,6 +11,22 @@ Adjacent problems and ideas found during other work. Not scheduled.
   are cosine-smoothed over a whole phrase, so it's probably inaudible. Fix: use
   `measureGrid(track).barSamples` for the phrase length.
 
+## Found 11-24-2026 (project v4 resync)
+
+- **A library change makes every saved project unreadable here.** Snapshots name
+  their track by content hash of the whole track JSON, `fills` included. Night 9
+  adds fill styles to `fills`, so after that sync every project saved before it
+  fails with "Source library mismatch". The app opens the same file with a warning
+  ("the track has changed in the library... Save to keep it"); the MCP passes no
+  `onSourceChanged` to `readSnapshot` and refuses. Options: pass it and report a
+  warning (renders never play fills, so base-mix audio may well be unchanged), or
+  stay strict and tell users to re-save in the app. Chris's call, before the final
+  Night 9 sync.
+- **Browser/native leg of parity not run.** `scripts/verify-parity.mjs` compares the
+  MCP with the app's built engine and shared renderer in Node. The app's
+  `tools/verify-render-parity.mjs` (bundled export worker in Chromium plus the
+  installed native app over `NATIVE_CDP`) is the full three-way check for a release.
+
 ## Package ideas (11-01-2026)
 
 - Publish from GitHub Actions with npm trusted publishing (provenance badge, no local token or 2FA prompt).

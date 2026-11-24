@@ -12,12 +12,24 @@ pnpm run build:engine
 pnpm run build
 # Source must already be committed before this release build.
 cd ../bckgrnd-msc-mcp
-pnpm run sync-engine ../bckgrnd-msc
-pnpm run typecheck
-pnpm run lint
-pnpm test
-pnpm run test:package
+pnpm run resync ../bckgrnd-msc --expect-commit <app-sha>
 ```
+
+`resync` runs, stopping at the first failure:
+
+| Step | What it does |
+|---|---|
+| `scripts/sync-engine.mjs` | Stage, hash-check and swap in the bundle; refuse a different app commit |
+| `scripts/stamp-project-fixtures.mjs` | Re-stamp `source.sha256` in `test/fixtures/project-*.bckgrnd.json` after a library change |
+| `typecheck`, `lint`, `test` | The usual gates (`pretest` builds `dist/`) |
+| `scripts/verify-parity.mjs <app> --baseline .vendor-previous` | Every track at 44.1/48 kHz plus the project fixtures, MCP vs the app's built engine, byte-identical; the stock tracks also against the previous bundle |
+| `test:package` | Packed install outside the repo |
+
+Each step also runs on its own (`pnpm run sync-engine`, `pnpm run verify-parity`).
+The supported project and snapshot versions are read from the vendored contracts
+(`properties.version.const`), cross-checked against the app's build manifest, and
+written to `SOURCE.json`. Sync also checks that the shared runtime writes that
+version and refuses the next one.
 
 `BCKGRND_MSC_DIR` can supply the source checkout. `--allow-dirty` is development
 only and produces an explicit warning in project-tool results. Do not publish a
@@ -26,8 +38,9 @@ bundle with `SOURCE.json.dirty: true`.
 The sync stages engine, library, contracts, generated shared runtime/declarations
 and fixtures, verifies their build hashes, boots the engine and resolves all
 tracks, then swaps the validated directory into `vendor/`. A normal failure leaves
-the old bundle intact. `.vendor-previous` is retained for rollback; archive it
-outside the repo after inspecting it before another sync. A crash between directory
+the old bundle intact. `.vendor-previous` is retained for rollback. Syncing again
+renames an existing one to `.vendor-previous-<commit>-<time>` (never deletes it);
+archive those outside the repo once inspected. A crash between directory
 renames requires restoring `.vendor-previous`; this is a maintainer operation,
 not a live updater. Never copy individual files into an installed package.
 

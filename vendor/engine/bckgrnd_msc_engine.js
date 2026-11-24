@@ -24,6 +24,14 @@ export class Engine {
         wasm.__wbg_engine_free(ptr, 0);
     }
     /**
+     * The request id of the build in progress, if one is.
+     * @returns {number | undefined}
+     */
+    active_build() {
+        const ret = wasm.engine_active_build(this.__wbg_ptr);
+        return ret === Number.MAX_SAFE_INTEGER ? undefined : ret;
+    }
+    /**
      * The request id of the fill playing now, if one is.
      * @returns {number | undefined}
      */
@@ -40,13 +48,44 @@ export class Engine {
     backspin() {
         wasm.engine_backspin(this.__wbg_ptr);
     }
+    /**
+     * Copy the base, the working mix as the engine holds it, into `out` as a 44-value
+     * scene vector. Held gestures are not in it: it is what capture reads. During a
+     * build it is where the build has got to. False (nothing written) when `out` is
+     * shorter than 44.
+     * @param {Float32Array} out
+     * @returns {boolean}
+     */
+    base_into(out) {
+        var ptr0 = passArrayF32ToWasm0(out, wasm.__wbindgen_malloc);
+        var len0 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_base_into(this.__wbg_ptr, ptr0, len0, out);
+        return ret !== 0;
+    }
     brake() {
         wasm.engine_brake(this.__wbg_ptr);
     }
     /**
-     * Cancel the queued fill if it is `request_id` (`fill cancelled`, reason 10).
-     * False when it is not queued: never queued, already started (a playing fill
-     * runs its bar), or already cancelled.
+     * Cancel the build if it is `request_id`, queued or running, reported as `build
+     * cancelled` with reason 10. A running build glides back to the base it started
+     * from, and its landing scene never lands. False when it is not queued or
+     * running: already applied, replaced, cancelled, or never queued.
+     * @param {number} request_id
+     * @returns {boolean}
+     */
+    cancel_build(request_id) {
+        const ret = wasm.engine_cancel_build(this.__wbg_ptr, request_id);
+        return ret !== 0;
+    }
+    /**
+     * Cancel the fill `request_id` (`docs/NIGHT8_PROTOCOL.md`). False when it is
+     * neither queued nor playing, or is a plain fill already playing (it runs its bar).
+     *
+     * - A plain fill waiting for its bar: `fill cancelled`, reason 10.
+     * - Tied to a scene (Fill into) or a build (Rise + Fill): the whole request is
+     *   cancelled, as [`Engine::cancel_scene`] or [`Engine::cancel_build`] on its
+     *   partner would. A waiting fill is cancelled with it; one already playing runs
+     *   its bar and is unlinked (52).
      * @param {number} request_id
      * @returns {boolean}
      */
@@ -55,8 +94,9 @@ export class Engine {
         return ret !== 0;
     }
     /**
-     * Withdraw a pending pattern revision (standalone or scene-linked) by request id.
-     * False when it is not pending: already applied, replaced or unknown.
+     * Withdraw a pending pattern revision (standalone, staged, scene-linked or
+     * build-linked) by request id. False when it is not pending: already applied,
+     * replaced or unknown.
      * @param {number} request_id
      * @returns {boolean}
      */
@@ -239,6 +279,14 @@ export class Engine {
         wasm.engine_panic(this.__wbg_ptr);
     }
     /**
+     * The request id of the build waiting for its bar line, if one is.
+     * @returns {number | undefined}
+     */
+    pending_build() {
+        const ret = wasm.engine_pending_build(this.__wbg_ptr);
+        return ret === Number.MAX_SAFE_INTEGER ? undefined : ret;
+    }
+    /**
      * The request id of the queued fill, if one is waiting for its bar.
      * @returns {number | undefined}
      */
@@ -279,6 +327,77 @@ export class Engine {
         wasm.engine_process(this.__wbg_ptr, ptr0, len0, out_l, ptr1, len1, out_r);
     }
     /**
+     * Queue a timed build (`docs/NIGHT7_PROTOCOL.md`). Returns 0 when accepted,
+     * otherwise the reason it was refused, also reported as `build rejected` (45)
+     * with `b` naming the part refused (1 bars, 2 target, 3 land).
+     *
+     * `bars` is 2, 4 or 8. `target` is the 44-value scene vector the mix moves toward
+     * across them; `land` is either empty (no landing scene) or a 44-value scene
+     * committed whole on the onset the build ends on. Both are validated like a
+     * scene's before anything changes, and a refused request leaves whatever was
+     * queued or running as it was.
+     *
+     * The build starts on the next bar line and ends `bars` bars later, on a bar
+     * line. Refused while stopped (`not playing`, 7) and while a scratch, brake or
+     * backspin is running (`transport`, 3). Latest wins: a pending scene is replaced
+     * by it (`scene replaced`, `a` = this id), and so is a build already queued or
+     * running (`build replaced`); a running one hands over where it has got to, and
+     * cancelling this one restores the base from before either.
+     *
+     * Pattern lanes staged just before with [`Engine::queue_patterns`] and `link` =
+     * `request_id` go with the build: they apply on its end onset, after the landing
+     * scene and before that step's notes, and are withdrawn (`patterns cancelled`)
+     * when it is refused (with its reason), cancelled (with the cancel's), or
+     * replaced (10), exactly as a scene's linked lanes are.
+     * @param {number} request_id
+     * @param {number} bars
+     * @param {Float32Array} target
+     * @param {Float32Array} land
+     * @returns {number}
+     */
+    queue_build(request_id, bars, target, land) {
+        const ptr0 = passArrayF32ToWasm0(target, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArrayF32ToWasm0(land, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_queue_build(this.__wbg_ptr, request_id, bars, ptr0, len0, ptr1, len1);
+        return ret;
+    }
+    /**
+     * [`Engine::queue_build`], finishing with a fill (Rise + Fill,
+     * `docs/NIGHT8_PROTOCOL.md`) when `fill_id` is not 0: fill `fill_index` of the track
+     * plays the build's last bar, and the landing scene and lanes commit on the next
+     * downbeat, the onset the build ends on, as without one.
+     *
+     * One transaction: everything is checked before anything changes, and a refusal of
+     * any part refuses all of it. It posts `build rejected` (45) and, with a fill,
+     * `fill rejected` (15) for `fill_id`, both with the reason and `b` = the part
+     * ([`detail`]; 5 the fill: no such fill, reason 1, or a fill already waiting,
+     * reason 8). Accepted with a fill, it posts `build queued`, `fill queued` (the bar
+     * the fill plays) and `fill linked` (51: `a` = this build, `b` = the landing step).
+     * Cancelled, the fill goes with it, or runs its bar unlinked if already playing;
+     * replaced, the fill is cancelled (or unlinked) with reason 11.
+     *
+     * `accent` 1 plays a crash on the onset it lands (`accent fired`, 53), with or
+     * without a landing scene; 0 none; anything else is refused as invalid, part 3.
+     * @param {number} request_id
+     * @param {number} bars
+     * @param {Float32Array} target
+     * @param {Float32Array} land
+     * @param {number} fill_id
+     * @param {number} fill_index
+     * @param {number} accent
+     * @returns {number}
+     */
+    queue_build_with(request_id, bars, target, land, fill_id, fill_index, accent) {
+        const ptr0 = passArrayF32ToWasm0(target, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArrayF32ToWasm0(land, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_queue_build_with(this.__wbg_ptr, request_id, bars, ptr0, len0, ptr1, len1, fill_id, fill_index, accent);
+        return ret;
+    }
+    /**
      * Queue fill `index` of the loaded track for the next bar line
      * (`docs/NIGHT3_PROTOCOL.md`, Fills). Returns 0 when accepted, otherwise the
      * reason, also reported as `fill rejected` (15): 1 no such fill, 7 not playing,
@@ -288,13 +407,71 @@ export class Engine {
      *
      * It starts on the first bar onset after the request (the onset-serial rule
      * scenes use), plays exactly sixteen steps, and the track's own drums carry on
-     * from the step after.
+     * from the step after. The same as [`Engine::queue_fill_at`] with phrase 0.
      * @param {number} request_id
      * @param {number} index
      * @returns {number}
      */
     queue_fill(request_id, index) {
         const ret = wasm.engine_queue_fill(this.__wbg_ptr, request_id, index);
+        return ret;
+    }
+    /**
+     * Queue fill `index` of the loaded track to end on a phrase line
+     * (`docs/NIGHT8_PROTOCOL.md`). Returns 0 when accepted, otherwise the reason, also
+     * reported as `fill rejected` (15).
+     *
+     * `phrase_bars` is 0 (the next bar, as [`Engine::queue_fill`]) or 2, 4, 8 or 16:
+     * the fill plays the bar that ends on the next phrase line of that length, or on
+     * the loop's wrap. `length` is 0, one bar; nothing else yet. Refused with 1 for any
+     * other `phrase_bars` or `length`, or no such fill; 7 while stopped; 3 during a
+     * scratch, brake or backspin; 8 while a fill is queued or playing.
+     * @param {number} request_id
+     * @param {number} index
+     * @param {number} phrase_bars
+     * @param {number} length
+     * @returns {number}
+     */
+    queue_fill_at(request_id, index, phrase_bars, length) {
+        const ret = wasm.engine_queue_fill_at(this.__wbg_ptr, request_id, index, phrase_bars, length);
+        return ret;
+    }
+    /**
+     * Fill into (`docs/NIGHT8_PROTOCOL.md`): fill `index` as [`Engine::queue_fill_at`]
+     * with `phrase_bars` and `length`, and the scene `values` (a 44-value vector)
+     * committed on the onset the fill ends, before that step's notes, as one request.
+     * Returns 0 when accepted, otherwise the reason.
+     *
+     * Lanes staged just before with [`Engine::queue_patterns`] and `link` = `scene_id`
+     * go with the scene, as a launch's do.
+     *
+     * Everything is checked before anything changes: both parts are queued or neither
+     * is. A refusal posts `fill rejected` (15) for `fill_id` and `scene rejected` (5)
+     * for `scene_id`, both with the reason and `b` = the part refused
+     * ([`detail`]: 1 the scene, 2 the fill, 0 the whole request), withdraws the lanes
+     * staged for `scene_id`, and leaves whatever was queued as it was. Reasons: 1 an
+     * invalid scene, fill index, phrase or length; 7 not playing; 3 a scratch, brake or
+     * backspin; 8 a fill already queued or playing.
+     *
+     * Accepted, it replaces a pending scene (`scene replaced`, latest wins, and that
+     * scene's lanes go with it) and posts `fill queued`, `scene queued` (the landing
+     * bar and step) and `fill linked` (51: `a` = `scene_id`, `b` = the landing step).
+     *
+     * `accent` is the scene's, as [`Engine::queue_scene_with`]: 1 a crash on the
+     * phrase line it lands on. Any other than 0 or 1 is refused, part 1.
+     * @param {number} fill_id
+     * @param {number} index
+     * @param {number} phrase_bars
+     * @param {number} length
+     * @param {number} scene_id
+     * @param {Float32Array} values
+     * @param {number} accent
+     * @returns {number}
+     */
+    queue_fill_into(fill_id, index, phrase_bars, length, scene_id, values, accent) {
+        const ptr0 = passArrayF32ToWasm0(values, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_queue_fill_into(this.__wbg_ptr, fill_id, index, phrase_bars, length, scene_id, ptr0, len0, accent);
         return ret;
     }
     /**
@@ -322,6 +499,16 @@ export class Engine {
      * - `link` = a scene request id: the lanes that scene sets. They apply when that
      *   scene commits, after any edit due on the same onset, and are withdrawn with
      *   it. The host queues them just before the scene.
+     * - `link` = a timed build's request id: the lanes that build sets. The host
+     *   queues them just before [`Engine::queue_build`], which takes them on; they
+     *   apply on the onset the build ends on, after its landing scene, and are
+     *   withdrawn with it (`docs/NIGHT7_PROTOCOL.md`).
+     *
+     * Linked lanes are only staged here. The request they name claims them if it is
+     * accepted and withdraws them (with its reason) if it is refused; until then they
+     * touch nothing a pending scene or build was accepted with. Lanes staged twice
+     * with no request between are replaced, and lanes left staged when a request with
+     * another id is accepted are withdrawn (reason 10): theirs never came.
      * @param {number} request_id
      * @param {number} timing
      * @param {number} link
@@ -344,6 +531,23 @@ export class Engine {
         const ptr0 = passArrayF32ToWasm0(values, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.engine_queue_scene(this.__wbg_ptr, request_id, timing, ptr0, len0);
+        return ret;
+    }
+    /**
+     * [`Engine::queue_scene`] with an accent (`docs/NIGHT8_PROTOCOL.md`): 0 none, 1 a
+     * crash on the onset the scene commits, during playback only (none when it applies
+     * while stopped), reported as `accent fired` (53). Any other accent is refused as
+     * invalid (1).
+     * @param {number} request_id
+     * @param {number} timing
+     * @param {Float32Array} values
+     * @param {number} accent
+     * @returns {number}
+     */
+    queue_scene_with(request_id, timing, values, accent) {
+        const ptr0 = passArrayF32ToWasm0(values, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_queue_scene_with(this.__wbg_ptr, request_id, timing, ptr0, len0, accent);
         return ret;
     }
     /**
