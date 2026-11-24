@@ -11,6 +11,10 @@ export class Engine {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * The request id of the build in progress, if one is.
+     */
+    active_build(): number | undefined;
+    /**
      * The request id of the fill playing now, if one is.
      */
     active_fill(): number | undefined;
@@ -21,16 +25,36 @@ export class Engine {
      * reversing has played yet, a synthetic sweep stands in, as the original did.
      */
     backspin(): void;
+    /**
+     * Copy the base, the working mix as the engine holds it, into `out` as a 44-value
+     * scene vector. Held gestures are not in it: it is what capture reads. During a
+     * build it is where the build has got to. False (nothing written) when `out` is
+     * shorter than 44.
+     */
+    base_into(out: Float32Array): boolean;
     brake(): void;
     /**
-     * Cancel the queued fill if it is `request_id` (`fill cancelled`, reason 10).
-     * False when it is not queued: never queued, already started (a playing fill
-     * runs its bar), or already cancelled.
+     * Cancel the build if it is `request_id`, queued or running, reported as `build
+     * cancelled` with reason 10. A running build glides back to the base it started
+     * from, and its landing scene never lands. False when it is not queued or
+     * running: already applied, replaced, cancelled, or never queued.
+     */
+    cancel_build(request_id: number): boolean;
+    /**
+     * Cancel the fill `request_id` (`docs/NIGHT8_PROTOCOL.md`). False when it is
+     * neither queued nor playing, or is a plain fill already playing (it runs its bar).
+     *
+     * - A plain fill waiting for its bar: `fill cancelled`, reason 10.
+     * - Tied to a scene (Fill into) or a build (Rise + Fill): the whole request is
+     *   cancelled, as [`Engine::cancel_scene`] or [`Engine::cancel_build`] on its
+     *   partner would. A waiting fill is cancelled with it; one already playing runs
+     *   its bar and is unlinked (52).
      */
     cancel_fill(request_id: number): boolean;
     /**
-     * Withdraw a pending pattern revision (standalone or scene-linked) by request id.
-     * False when it is not pending: already applied, replaced or unknown.
+     * Withdraw a pending pattern revision (standalone, staged, scene-linked or
+     * build-linked) by request id. False when it is not pending: already applied,
+     * replaced or unknown.
      */
     cancel_patterns(request_id: number): boolean;
     /**
@@ -109,6 +133,10 @@ export class Engine {
      */
     panic(): void;
     /**
+     * The request id of the build waiting for its bar line, if one is.
+     */
+    pending_build(): number | undefined;
+    /**
      * The request id of the queued fill, if one is waiting for its bar.
      */
     pending_fill(): number | undefined;
@@ -127,6 +155,50 @@ export class Engine {
      */
     process(out_l: Float32Array, out_r: Float32Array): void;
     /**
+     * Queue a timed build (`docs/NIGHT7_PROTOCOL.md`). Returns 0 when accepted,
+     * otherwise the reason it was refused, also reported as `build rejected` (45)
+     * with `b` naming the part refused (1 bars, 2 target, 3 land).
+     *
+     * `bars` is 2, 4 or 8. `target` is the 44-value scene vector the mix moves toward
+     * across them; `land` is either empty (no landing scene) or a 44-value scene
+     * committed whole on the onset the build ends on. Both are validated like a
+     * scene's before anything changes, and a refused request leaves whatever was
+     * queued or running as it was.
+     *
+     * The build starts on the next bar line and ends `bars` bars later, on a bar
+     * line. Refused while stopped (`not playing`, 7) and while a scratch, brake or
+     * backspin is running (`transport`, 3). Latest wins: a pending scene is replaced
+     * by it (`scene replaced`, `a` = this id), and so is a build already queued or
+     * running (`build replaced`); a running one hands over where it has got to, and
+     * cancelling this one restores the base from before either.
+     *
+     * Pattern lanes staged just before with [`Engine::queue_patterns`] and `link` =
+     * `request_id` go with the build: they apply on its end onset, after the landing
+     * scene and before that step's notes, and are withdrawn (`patterns cancelled`)
+     * when it is refused (with its reason), cancelled (with the cancel's), or
+     * replaced (10), exactly as a scene's linked lanes are.
+     */
+    queue_build(request_id: number, bars: number, target: Float32Array, land: Float32Array): number;
+    /**
+     * [`Engine::queue_build`], finishing with a fill (Rise + Fill,
+     * `docs/NIGHT8_PROTOCOL.md`) when `fill_id` is not 0: fill `fill_index` of the track
+     * plays the build's last bar, and the landing scene and lanes commit on the next
+     * downbeat, the onset the build ends on, as without one.
+     *
+     * One transaction: everything is checked before anything changes, and a refusal of
+     * any part refuses all of it. It posts `build rejected` (45) and, with a fill,
+     * `fill rejected` (15) for `fill_id`, both with the reason and `b` = the part
+     * ([`detail`]; 5 the fill: no such fill, reason 1, or a fill already waiting,
+     * reason 8). Accepted with a fill, it posts `build queued`, `fill queued` (the bar
+     * the fill plays) and `fill linked` (51: `a` = this build, `b` = the landing step).
+     * Cancelled, the fill goes with it, or runs its bar unlinked if already playing;
+     * replaced, the fill is cancelled (or unlinked) with reason 11.
+     *
+     * `accent` 1 plays a crash on the onset it lands (`accent fired`, 53), with or
+     * without a landing scene; 0 none; anything else is refused as invalid, part 3.
+     */
+    queue_build_with(request_id: number, bars: number, target: Float32Array, land: Float32Array, fill_id: number, fill_index: number, accent: number): number;
+    /**
      * Queue fill `index` of the loaded track for the next bar line
      * (`docs/NIGHT3_PROTOCOL.md`, Fills). Returns 0 when accepted, otherwise the
      * reason, also reported as `fill rejected` (15): 1 no such fill, 7 not playing,
@@ -136,9 +208,46 @@ export class Engine {
      *
      * It starts on the first bar onset after the request (the onset-serial rule
      * scenes use), plays exactly sixteen steps, and the track's own drums carry on
-     * from the step after.
+     * from the step after. The same as [`Engine::queue_fill_at`] with phrase 0.
      */
     queue_fill(request_id: number, index: number): number;
+    /**
+     * Queue fill `index` of the loaded track to end on a phrase line
+     * (`docs/NIGHT8_PROTOCOL.md`). Returns 0 when accepted, otherwise the reason, also
+     * reported as `fill rejected` (15).
+     *
+     * `phrase_bars` is 0 (the next bar, as [`Engine::queue_fill`]) or 2, 4, 8 or 16:
+     * the fill plays the bar that ends on the next phrase line of that length, or on
+     * the loop's wrap. `length` is 0, one bar; nothing else yet. Refused with 1 for any
+     * other `phrase_bars` or `length`, or no such fill; 7 while stopped; 3 during a
+     * scratch, brake or backspin; 8 while a fill is queued or playing.
+     */
+    queue_fill_at(request_id: number, index: number, phrase_bars: number, length: number): number;
+    /**
+     * Fill into (`docs/NIGHT8_PROTOCOL.md`): fill `index` as [`Engine::queue_fill_at`]
+     * with `phrase_bars` and `length`, and the scene `values` (a 44-value vector)
+     * committed on the onset the fill ends, before that step's notes, as one request.
+     * Returns 0 when accepted, otherwise the reason.
+     *
+     * Lanes staged just before with [`Engine::queue_patterns`] and `link` = `scene_id`
+     * go with the scene, as a launch's do.
+     *
+     * Everything is checked before anything changes: both parts are queued or neither
+     * is. A refusal posts `fill rejected` (15) for `fill_id` and `scene rejected` (5)
+     * for `scene_id`, both with the reason and `b` = the part refused
+     * ([`detail`]: 1 the scene, 2 the fill, 0 the whole request), withdraws the lanes
+     * staged for `scene_id`, and leaves whatever was queued as it was. Reasons: 1 an
+     * invalid scene, fill index, phrase or length; 7 not playing; 3 a scratch, brake or
+     * backspin; 8 a fill already queued or playing.
+     *
+     * Accepted, it replaces a pending scene (`scene replaced`, latest wins, and that
+     * scene's lanes go with it) and posts `fill queued`, `scene queued` (the landing
+     * bar and step) and `fill linked` (51: `a` = `scene_id`, `b` = the landing step).
+     *
+     * `accent` is the scene's, as [`Engine::queue_scene_with`]: 1 a crash on the
+     * phrase line it lands on. Any other than 0 or 1 is refused, part 1.
+     */
+    queue_fill_into(fill_id: number, index: number, phrase_bars: number, length: number, scene_id: number, values: Float32Array, accent: number): number;
     /**
      * Queue a scene (`docs/NIGHT3_PROTOCOL.md`). Returns 0 when accepted, otherwise
      * the reason it was refused, which is also reported as a `rejected` event.
@@ -164,9 +273,26 @@ export class Engine {
      * - `link` = a scene request id: the lanes that scene sets. They apply when that
      *   scene commits, after any edit due on the same onset, and are withdrawn with
      *   it. The host queues them just before the scene.
+     * - `link` = a timed build's request id: the lanes that build sets. The host
+     *   queues them just before [`Engine::queue_build`], which takes them on; they
+     *   apply on the onset the build ends on, after its landing scene, and are
+     *   withdrawn with it (`docs/NIGHT7_PROTOCOL.md`).
+     *
+     * Linked lanes are only staged here. The request they name claims them if it is
+     * accepted and withdraws them (with its reason) if it is refused; until then they
+     * touch nothing a pending scene or build was accepted with. Lanes staged twice
+     * with no request between are replaced, and lanes left staged when a request with
+     * another id is accepted are withdrawn (reason 10): theirs never came.
      */
     queue_patterns(request_id: number, timing: number, link: number, data: Float32Array): number;
     queue_scene(request_id: number, timing: number, values: Float32Array): number;
+    /**
+     * [`Engine::queue_scene`] with an accent (`docs/NIGHT8_PROTOCOL.md`): 0 none, 1 a
+     * crash on the onset the scene commits, during playback only (none when it applies
+     * while stopped), reported as `accent fired` (53). Any other accent is refused as
+     * invalid (1).
+     */
+    queue_scene_with(request_id: number, timing: number, values: Float32Array, accent: number): number;
     /**
      * End every override, and the latched echo throw, leaving the working mix as it
      * is: Release FX. Echo repeats already in the line ring out on the base feedback.
@@ -319,9 +445,12 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_engine_free: (a: number, b: number) => void;
+    readonly engine_active_build: (a: number) => number;
     readonly engine_active_fill: (a: number) => number;
     readonly engine_backspin: (a: number) => void;
+    readonly engine_base_into: (a: number, b: number, c: number, d: any) => number;
     readonly engine_brake: (a: number) => void;
+    readonly engine_cancel_build: (a: number, b: number) => number;
     readonly engine_cancel_fill: (a: number, b: number) => number;
     readonly engine_cancel_patterns: (a: number, b: number) => number;
     readonly engine_cancel_pending: (a: number, b: number) => number;
@@ -342,14 +471,20 @@ export interface InitOutput {
     readonly engine_new_wasm: (a: number) => number;
     readonly engine_nudge: (a: number, b: number) => void;
     readonly engine_panic: (a: number) => void;
+    readonly engine_pending_build: (a: number) => number;
     readonly engine_pending_fill: (a: number) => number;
     readonly engine_pending_patterns: (a: number) => number;
     readonly engine_pending_scene: (a: number) => number;
     readonly engine_play: (a: number) => void;
     readonly engine_process: (a: number, b: number, c: number, d: any, e: number, f: number, g: any) => void;
+    readonly engine_queue_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly engine_queue_build_with: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => number;
     readonly engine_queue_fill: (a: number, b: number, c: number) => number;
+    readonly engine_queue_fill_at: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly engine_queue_fill_into: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
     readonly engine_queue_patterns: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly engine_queue_scene: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly engine_queue_scene_with: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly engine_release_gestures: (a: number) => void;
     readonly engine_samples_to_next_downbeat: (a: number, b: number, c: number) => number;
     readonly engine_scope_json: (a: number) => [number, number];

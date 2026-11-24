@@ -649,7 +649,7 @@ function compileLanes(lanes) {
 
 // frontend/lib/contract.ts
 var PROJECT_FORMAT = "bckgrnd-msc/project";
-var PROJECT_VERSION = 3;
+var PROJECT_VERSION = 4;
 var PARAMETERS = parameters_default.parameters;
 var STEMS = parameters_default.stems;
 var byId = new Map(PARAMETERS.map((p) => [p.id, p]));
@@ -699,7 +699,7 @@ function factoryScene(track, recipeId, slot, revision = 1) {
       solo: false
     };
   }
-  return { slot, name: recipe.name, factory: recipeId, revision, params, stems, patterns: {} };
+  return { slot, name: recipe.name, factory: recipeId, revision, params, stems, patterns: {}, crash: false };
 }
 function factoryScenes(track) {
   return { slots: SCENE_SLOTS.map((slot) => factoryScene(track, slot, slot)) };
@@ -743,7 +743,7 @@ function readScenes(raw, version = PROJECT_VERSION) {
   if (!isObj2(raw) || !sameKeys(raw, ["slots"])) fail2('expected an object with only "slots"');
   const slots = raw.slots;
   if (!Array.isArray(slots) || slots.length !== SCENE_SLOTS.length) fail2(`expected ${SCENE_SLOTS.length} slots`);
-  const keys = ["slot", "name", "factory", "revision", "params", "stems", "patterns"];
+  const keys = ["slot", "name", "factory", "revision", "params", "stems", "patterns", ...version >= 4 ? ["crash"] : []];
   const factoryIds = FACTORY_SCENES.map((r) => r.id);
   return {
     slots: slots.map((scene, i) => {
@@ -770,6 +770,8 @@ function readScenes(raw, version = PROJECT_VERSION) {
       const emptyPatterns = isObj2(pats) && Object.keys(pats).length === 0 || Array.isArray(pats) && pats.length === 0;
       if (version < 3 && !emptyPatterns) fail2(`slot ${slot} refers to patterns, which this version does not support`);
       const patterns = version < 3 ? {} : readScenePatterns(pats, slot);
+      if (version >= 4 && typeof sc.crash !== "boolean") fail2(`slot ${slot} crash must be true or false`);
+      const crash = version >= 4 ? sc.crash : false;
       if (!isObj2(sc.params) || !sameKeySet(sc.params, SCENE_PARAMS)) {
         fail2(`slot ${slot} must hold exactly the scene parameters`);
       }
@@ -805,7 +807,8 @@ function readScenes(raw, version = PROJECT_VERSION) {
         revision: sc.revision,
         params,
         stems,
-        patterns
+        patterns,
+        crash
       };
     })
   };
@@ -925,6 +928,16 @@ function fromLegacyPreset(preset) {
 
 // frontend/lib/snapshot.ts
 var RENDERER_VERSION = "project-renderer-1";
+var OLDEST_SNAPSHOT_PROJECT = 3;
+function asCurrentVersion(project) {
+  const p = project;
+  if (!p || typeof p !== "object" || p.version !== 3 || !Array.isArray(p.scenes?.slots)) return project;
+  return {
+    ...p,
+    version: PROJECT_VERSION,
+    scenes: { ...p.scenes, slots: p.scenes.slots.map((slot) => slot && typeof slot === "object" ? { ...slot, crash: false } : slot) }
+  };
+}
 function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value && typeof value === "object") return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b, "en")).map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(",")}}`;
@@ -958,10 +971,12 @@ async function readSnapshot(raw, tracks, source, onSourceChanged) {
     if (doc.version !== 1) throw new Error(`Unsupported snapshot version: ${doc.version}. Keep the original file and use a compatible app.`);
     if (doc.renderer !== RENDERER_VERSION) throw new Error(`Unsupported renderer: ${doc.renderer}.`);
     if (typeof doc.id !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(doc.id) || !Number.isSafeInteger(doc.revision) || doc.revision < 1) throw new Error("Invalid project identity or revision.");
-    if (doc.project?.version !== PROJECT_VERSION) throw new Error("Unsupported musical project version in snapshot.");
+    const v = doc.project?.version;
+    if (typeof v === "number" && v > PROJECT_VERSION) throw new Error(`Project version ${v} is newer than this app understands (${PROJECT_VERSION}). Keep the original file and use a newer app.`);
+    if (typeof v !== "number" || v < OLDEST_SNAPSHOT_PROJECT) throw new Error("Unsupported musical project version in snapshot.");
   }
   const project = migrateProject(wrapped ? doc.project : raw, (id) => tracks.find((t) => t.id === id));
-  if (wrapped && canonical(project) !== canonical(doc.project)) throw new Error("Project contains unsupported fields or invalid parameter values.");
+  if (wrapped && canonical(project) !== canonical(asCurrentVersion(doc.project))) throw new Error("Project contains unsupported fields or invalid parameter values.");
   const arranged = await source(project.trackId);
   const hash = await contentHash(arranged);
   if (wrapped && doc.source?.trackId !== project.trackId) throw new Error(`Source library mismatch for ${project.trackId}. The file names a different track than its project.`);
@@ -969,7 +984,8 @@ async function readSnapshot(raw, tracks, source, onSourceChanged) {
     if (!onSourceChanged) throw new Error(`Source library mismatch for ${project.trackId}. Install the matching library before opening or rendering this project.`);
     onSourceChanged(project.trackId);
   }
-  return wrapped ? structuredClone(doc) : snapshotOf(project, arranged, crypto.randomUUID(), 1);
+  if (wrapped) return doc.project?.version === PROJECT_VERSION ? structuredClone(doc) : { ...structuredClone(doc), project };
+  return snapshotOf(project, arranged, crypto.randomUUID(), 1);
 }
 
 // frontend/lib/scenes.ts

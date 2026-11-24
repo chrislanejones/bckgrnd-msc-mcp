@@ -246,3 +246,21 @@ describe.skipIf(!hasFfmpeg)('bckgrnd_mix_under_voice', () => {
     expect(text).toContain('exactly one');
   });
 });
+
+describe('bckgrnd_validate_project', () => {
+  it('names the versions it reads and reports a migrated v3 file as stored v3, read v4', async () => {
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === 'bckgrnd_validate_project')?.description).toContain('versions 1-4');
+    const project = new URL('./fixtures/project-v3.bckgrnd.json', import.meta.url).pathname;
+    const { isError, data } = await call('bckgrnd_validate_project', { project_path: decodeURIComponent(project) });
+    expect(isError).toBe(false);
+    expect(data).toMatchObject({ valid: true, schema_version: 4, stored_schema_version: 3, warnings: [] });
+  });
+
+  it('refuses a v5 project by name', async () => {
+    const project = decodeURIComponent(new URL('./fixtures/project-v5.bckgrnd.json', import.meta.url).pathname);
+    const { isError, text } = await call('bckgrnd_validate_project', { project_path: project });
+    expect(isError).toBe(true);
+    expect(text).toContain('Project version 5 is newer than this app understands (4)');
+  });
+});

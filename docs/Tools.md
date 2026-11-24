@@ -194,6 +194,17 @@ Output is atomic PCM16 stereo WAV; cancellation publishes no partial file. Resul
 include path, revision/build identity, frames, duration, peak/RMS and render time.
 Malformed patterns, unknown formats/versions and missing dependencies fail first.
 
+Project versions come from the vendored contract (`contracts/project.schema.json`),
+currently 4. Versions 1–3 are read exactly as the app reads them: migrated in memory,
+never rewritten on disk. A v3 snapshot's scenes each gain `crash: false`. Version 5
+and newer are refused by name ("newer than this app understands"). Validation reports
+`schema_version` (as read, 4) and `stored_schema_version` (as written in the file).
+A v3 file and its v4 reading render the same bytes.
+
+A v4 scene's `crash` (crash on launch) is read and checked but never heard here:
+renders play the project's base mix and never launch a stored scene, so no crash
+accent can fire.
+
 Accepted notes/mix/effects render exactly as saved. An explicitly empty lane stays
 empty. Scenes are alternatives, not an automatic sequence. Transient performance
 and unaccepted auditions are excluded. Kick tuning stays on the source root.
