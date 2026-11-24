@@ -44,6 +44,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "sync-engine": "node scripts/sync-engine.mjs",
+    "resync": "node scripts/resync.mjs",
+    "verify-parity": "node scripts/verify-parity.mjs",
     "prepare": "tsc -p tsconfig.build.json",
     "build:vercel": "pnpm run build && node scripts/prepare-vercel.mjs",
     "pretest": "pnpm run build && node scripts/prepare-vercel.mjs",
