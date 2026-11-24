@@ -10,6 +10,6 @@ vendor/runtime/
 .env*
 
 .vendor-stage-*
-.vendor-previous
+.vendor-previous*
 .agents/
 .playwright-mcp/
