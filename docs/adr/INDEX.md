@@ -13,3 +13,4 @@ live in bckgrnd-msc's `docs/adr/`. This index covers the MCP server only.
 | # | Decision | Status | Date |
 |---|---|---|---|
 | [001](001-typescript-server-over-vendored-wasm.md) | A TypeScript MCP server renders offline through the website's own vendored wasm build; ffmpeg mixes it under voice | draft | 2026-10-21 |
+| [002](002-check-setup-reports-derived-capabilities.md) | `bckgrnd_check_setup` reports compatibility, with capability flags derived from the advertised tools | draft | 2026-11-25 |
