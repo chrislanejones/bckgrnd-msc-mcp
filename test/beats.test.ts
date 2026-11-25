@@ -140,6 +140,25 @@ describe('bckgrnd_beat_map', () => {
     }
   });
 
+  it('maps the shortest and longest supported takes on every track and refuses lengths outside them', async () => {
+    const previous = process.env.BCKGRND_MSC_OUT_DIR;
+    process.env.BCKGRND_MSC_OUT_DIR = dir;
+    try {
+      for (const track of listTracks()) {
+        const grid = measureGrid(track);
+        for (const seconds of [1, 60, 3600]) {
+          const { isError, data } = await call({ track: track.id, seconds });
+          expect(isError, `${track.id} ${seconds}s`).toBe(false);
+          // Every beat that starts inside the take, and none after it.
+          expect(data.beat_count, `${track.id} ${seconds}s`).toBe(Math.ceil((seconds * SAMPLE_RATE) / grid.beatSamples));
+        }
+      }
+      for (const seconds of [0.5, 3600.5]) expect((await call({ track: 'rain', seconds })).isError, `${seconds}s`).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.BCKGRND_MSC_OUT_DIR; else process.env.BCKGRND_MSC_OUT_DIR = previous;
+    }
+  });
+
   it('names the real tracks when asked for one that does not exist', async () => {
     const { isError, text } = await call({ track: 'polka', seconds: 10 });
     expect(isError).toBe(true);
