@@ -43,6 +43,8 @@ export const engine_queue_patterns: (a: number, b: number, c: number, d: number,
 export const engine_queue_scene: (a: number, b: number, c: number, d: number, e: number) => number;
 export const engine_queue_scene_with: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
 export const engine_release_gestures: (a: number) => void;
+export const engine_repeat_division: (a: number) => number;
+export const engine_repeat_looping: (a: number) => number;
 export const engine_samples_to_next_downbeat: (a: number, b: number, c: number) => number;
 export const engine_scope_json: (a: number) => [number, number];
 export const engine_scratch_end: (a: number, b: number) => void;
@@ -62,6 +64,7 @@ export const engine_set_master: (a: number, b: number) => void;
 export const engine_set_muted_index: (a: number, b: number, c: number) => void;
 export const engine_set_output_gain: (a: number, b: number) => void;
 export const engine_set_output_gain_wasm: (a: number, b: number) => void;
+export const engine_set_repeat_division: (a: number, b: number) => number;
 export const engine_set_reverb_decay: (a: number, b: number) => void;
 export const engine_set_reverb_mix: (a: number, b: number) => void;
 export const engine_set_scene: (a: number, b: number, c: number) => number;

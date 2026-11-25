@@ -164,7 +164,7 @@ export class Engine {
     }
     /**
      * Begin a temporary override (`docs/NIGHT3_PROTOCOL.md`, Gestures): kind 1 Echo
-     * Throw, 2 Filter Hold. False (nothing changed) for an unknown kind, a token
+     * Throw, 2 Filter Hold, 3 Beat Repeat (`docs/NIGHT10_PROTOCOL.md`). False (nothing changed) for an unknown kind, a token
      * already held, or when four are already held. The override expires after 3 s
      * of rendered audio unless [`Engine::gesture_renew`] is called (event 21).
      * @param {number} token
@@ -558,6 +558,23 @@ export class Engine {
         wasm.engine_release_gestures(this.__wbg_ptr);
     }
     /**
+     * Beat Repeat's division.
+     * @returns {number}
+     */
+    repeat_division() {
+        const ret = wasm.engine_repeat_division(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * Whether Beat Repeat is looping its slice now (held, past the grid line and the
+     * first pass). Not whether one is held: that is the gesture.
+     * @returns {boolean}
+     */
+    repeat_looping() {
+        const ret = wasm.engine_repeat_looping(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Samples until the next downbeat `bars` from now, at least `min_ahead` away.
      *
      * The worklet uses this to schedule an auto-mix handover on a musical boundary
@@ -733,6 +750,18 @@ export class Engine {
      */
     set_output_gain_wasm(gain) {
         wasm.engine_set_output_gain_wasm(this.__wbg_ptr, gain);
+    }
+    /**
+     * Beat Repeat's division as a note value: 4, 8 (the default) or 16. A live
+     * setting, not part of the mix, a scene or a project. False (nothing changed) for
+     * any other value. While a repeat is engaged, the new division captures again on
+     * its next grid line.
+     * @param {number} division
+     * @returns {boolean}
+     */
+    set_repeat_division(division) {
+        const ret = wasm.engine_set_repeat_division(this.__wbg_ptr, division);
+        return ret !== 0;
     }
     /**
      * The room's decay, 0.2 to 2.5 s (default 0.32 s).

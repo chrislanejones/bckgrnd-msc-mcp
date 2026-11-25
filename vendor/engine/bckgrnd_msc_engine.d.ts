@@ -93,7 +93,7 @@ export class Engine {
     event_count(): number;
     /**
      * Begin a temporary override (`docs/NIGHT3_PROTOCOL.md`, Gestures): kind 1 Echo
-     * Throw, 2 Filter Hold. False (nothing changed) for an unknown kind, a token
+     * Throw, 2 Filter Hold, 3 Beat Repeat (`docs/NIGHT10_PROTOCOL.md`). False (nothing changed) for an unknown kind, a token
      * already held, or when four are already held. The override expires after 3 s
      * of rendered audio unless [`Engine::gesture_renew`] is called (event 21).
      */
@@ -299,6 +299,15 @@ export class Engine {
      */
     release_gestures(): void;
     /**
+     * Beat Repeat's division.
+     */
+    repeat_division(): number;
+    /**
+     * Whether Beat Repeat is looping its slice now (held, past the grid line and the
+     * first pass). Not whether one is held: that is the gesture.
+     */
+    repeat_looping(): boolean;
+    /**
      * Samples until the next downbeat `bars` from now, at least `min_ahead` away.
      *
      * The worklet uses this to schedule an auto-mix handover on a musical boundary
@@ -396,6 +405,13 @@ export class Engine {
     set_output_gain(gain: number): void;
     set_output_gain_wasm(gain: number): void;
     /**
+     * Beat Repeat's division as a note value: 4, 8 (the default) or 16. A live
+     * setting, not part of the mix, a scene or a project. False (nothing changed) for
+     * any other value. While a repeat is engaged, the new division captures again on
+     * its next grid line.
+     */
+    set_repeat_division(division: number): boolean;
+    /**
      * The room's decay, 0.2 to 2.5 s (default 0.32 s).
      */
     set_reverb_decay(seconds: number): void;
@@ -486,6 +502,8 @@ export interface InitOutput {
     readonly engine_queue_scene: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly engine_queue_scene_with: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly engine_release_gestures: (a: number) => void;
+    readonly engine_repeat_division: (a: number) => number;
+    readonly engine_repeat_looping: (a: number) => number;
     readonly engine_samples_to_next_downbeat: (a: number, b: number, c: number) => number;
     readonly engine_scope_json: (a: number) => [number, number];
     readonly engine_scratch_end: (a: number, b: number) => void;
@@ -505,6 +523,7 @@ export interface InitOutput {
     readonly engine_set_muted_index: (a: number, b: number, c: number) => void;
     readonly engine_set_output_gain: (a: number, b: number) => void;
     readonly engine_set_output_gain_wasm: (a: number, b: number) => void;
+    readonly engine_set_repeat_division: (a: number, b: number) => number;
     readonly engine_set_reverb_decay: (a: number, b: number) => void;
     readonly engine_set_reverb_mix: (a: number, b: number) => void;
     readonly engine_set_scene: (a: number, b: number, c: number) => number;
