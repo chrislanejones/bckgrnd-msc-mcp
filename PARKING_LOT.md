@@ -27,6 +27,29 @@ Adjacent problems and ideas found during other work. Not scheduled.
   `tools/verify-render-parity.mjs` (bundled export worker in Chromium plus the
   installed native app over `NATIVE_CDP`) is the full three-way check for a release.
 
+## Found 11-25-2026 (Night 1 release integration)
+
+- **Sync can drop the variation catalog without an error.** If the app's
+  `build` runs before `build:static`, the manifest has no
+  `library/variations/` and `sync-engine.mjs` swaps in a bundle without them.
+  Happened once tonight; caught in the diff. Fix: have the sync refuse when the
+  previous bundle had a path prefix the new one lacks, unless `--allow-removal`.
+- **Capability argument checks scan every tool.** A `timeline` argument added to
+  an unrelated tool would turn `timeline_rendering` on (ADR-002 pre-mortem).
+  Night 2 should scope each predicate to the tool that owns the feature.
+- **`compatibility()` builds a second server and reads all 20 track files on
+  every `bckgrnd_check_setup` call.** Cheap today; cache it per process if the
+  check ever runs in a hot path.
+- **The hosted server has no capability report.** `bckgrnd_check_setup` is
+  local only. Hosted clients have to read the tool list.
+- **Stock-track audio differs from 0.3.1 on all 18 original tracks** (engine
+  and library moved from `bd79af5` at Night 6). Byte comparison only; nobody has
+  listened to the two side by side.
+- **The installed companion skill (`~/.agents/skills/background-music`) is older
+  than the repo's.** Reinstall after the release, not before.
+- **`docs/Night6-Release.md` describes rc.1 in the present tense.** Fold it into
+  the 0.4.0 release record once 0.4.0 ships.
+
 ## Package ideas (11-01-2026)
 
 - Publish from GitHub Actions with npm trusted publishing (provenance badge, no local token or 2FA prompt).

@@ -1,6 +1,22 @@
 # Tools
 
-Eight local tools. The hosted server exposes list, render, mix, preview and beat map with upload/audio schemas; see [Vercel hosting](Vercel.md). All paths are absolute. The server is started from a folder nobody
+Ten local tools. The hosted server exposes five of them (list, render, mix, preview
+and beat map) with upload/audio schemas instead of paths; see [Vercel hosting](Vercel.md).
+
+| Tool | Local | Hosted | Since |
+|---|---|---|---|
+| `bckgrnd_list_tracks` | yes | yes | 0.1.0 |
+| `bckgrnd_render_track` | yes | yes (120 s, MP3) | 0.1.0 |
+| `bckgrnd_mix_under_voice` | yes | yes (uploaded voice) | 0.1.0 |
+| `bckgrnd_preview_tracks` | yes | yes | 0.2.0 |
+| `bckgrnd_mix_video` | yes | no | 0.3.0 |
+| `bckgrnd_presets` | yes | no | 0.3.0 |
+| `bckgrnd_check_setup` | yes | no | 0.3.0 |
+| `bckgrnd_beat_map` | yes | yes | 0.4.0 |
+| `bckgrnd_validate_project` | yes | no | 0.4.0 |
+| `bckgrnd_render_project` | yes | no | 0.4.0 |
+
+All paths are absolute. The server is started from a folder nobody
 picked, so a relative path would land somewhere surprising, and it refuses them
 instead. No tool replaces an existing file unless you pass `overwrite: true`.
 
@@ -124,6 +140,45 @@ connections }` with specific diagnostic messages and installation commands.
 The CLI exposes the same check as `--check` or `doctor`, returning exit 0 when
 all checks pass and 1 otherwise. It never modifies client configuration.
 
+Since 0.4.0 it also says what this install can do, so an agent can look before
+it passes an argument. Nothing in it is typed in by hand: versions come from
+`vendor/contracts/`, the build from `vendor/SOURCE.json`, the tracks and fill
+styles from `vendor/library/`, and the capability flags from the tools the
+server actually registers.
+
+| Field | Where it comes from | 0.4.0 value |
+|---|---|---|
+| `server_version` | `package.json` | `0.4.0-rc.2` |
+| `project_version` | `contracts/project.schema.json` | 4 |
+| `readable_project_versions` | v1 up to `project_version` | `[1, 2, 3, 4]` |
+| `snapshot_version` | `contracts/snapshot.schema.json` | 1 |
+| `renderer` | the shared runtime | `project-renderer-1` |
+| `app_commit`, `build_id`, `bundle_dirty` | `SOURCE.json` | `c57013d…`, `9e747ff3…`, false |
+| `track_count`, `sections` | `library/index.json` | 20; EDM 6, Hip-hop 2, Lofi 6, Breaks 6 |
+| `stem_count`, `stems` | `contracts/parameters.json` | 8 |
+| `tools` | the registered tools | the ten above |
+
+`capabilities` is a flag per feature. A flag is true only when a registered tool
+or argument provides it, so a future release that adds the argument turns it on
+without anyone editing a list.
+
+| Capability | 0.4.0 | Turns on when the server has |
+|---|---|---|
+| `project_rendering` | **true** | `bckgrnd_render_project` |
+| `beat_mapping` | **true** | `bckgrnd_beat_map` |
+| `project_editing` | false | `bckgrnd_edit_project` |
+| `timeline_rendering` | false | `bckgrnd_render_timeline` or a `timeline` argument |
+| `individual_stem_volume` | false | a `stem_volumes` argument |
+| `scheduled_scene_launches` | false | a `scene_launches` argument |
+| `fill_style_rendering` | false | a `fill_style` argument |
+
+`engine_features` lists what the engine and contracts contain: the 17 mix and
+effect `parameters`, the per-stem `stem_parameters` (volume, send, muted, solo),
+the four `scene_slots`, the nine `pattern_lanes` and the four `fill_styles`
+(classic, simple, busy, syncopated). **Listed there does not mean a tool accepts
+it.** Only `capabilities` and each tool's input schema say that. A failed bundle
+read leaves these fields out and fails the `capabilities` check with the reason.
+
 ## `bckgrnd_beat_map`
 
 The exact time of every beat and bar in a track, for cutting video, timing
@@ -179,7 +234,7 @@ Errors come back as tool errors with the fix in the message.
 | `Give exactly one of track or music_path` | Both or neither | Pick one |
 | `... is silent` | The voice file has no sound | Check the file |
 
-## Saved projects (0.4.0-rc.1 candidate, local)
+## Saved projects (local)
 
 `bckgrnd_validate_project({project_path})` validates an absolute snapshot file,
 source library hash, schema versions and the complete bundled renderer. It returns

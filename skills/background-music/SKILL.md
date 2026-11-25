@@ -2,7 +2,7 @@
 name: background-music
 description: Add background music to narration, podcasts, screen recordings or videos using the bckgrnd-msc MCP server. Compare short previews, reuse favorite settings, keep speech clear, and export audio or synchronized video. Use when someone asks to put music under a voice, add a beat to a recording, or improve a narrated MP3 or video.
 metadata:
-  version: "0.4.0-rc.1"
+  version: "0.4.0-rc.2"
 ---
 
 # Background music under a voice
@@ -18,13 +18,15 @@ Installing the skill adds instructions; connect the MCP separately. Local
 processing is the default. Node 22+ runs the companion; ffmpeg and ffprobe are
 required for narration/video mixing, not standalone project WAV rendering.
 
-Night 6's project tools are in the `0.4.0-rc.1` candidate, not the published
-`0.3.1` package below. Use the tested local installation's absolute Node and
-`dist/index.js` paths from `bckgrnd_check_setup` or `--check`; do not claim an
-unpublished version can be installed from a registry. In T3 Code with Codex,
-configure that stdio command with `codex mcp add`, then reconnect the provider
-session and execute a real tool call. A CLI health check alone is not a client
-connection test. Change only this companion's configuration.
+Project tools, beat maps and the capability report are in the `0.4.0-rc.2`
+candidate, not the published `0.3.1` package below. Use the tested local
+installation's absolute Node and `dist/index.js` paths from `bckgrnd_check_setup`
+or `--check`; do not claim an unpublished version can be installed from a
+registry. In T3 Code, add that stdio command with `claude mcp add` or
+`codex mcp add` for the thread's provider, start a new thread or reconnect the
+provider, then make a real tool call. A CLI health check alone is not a client
+connection test. Change only this companion's configuration, and only when the
+user asks you to set it up.
 
 Claude Code:
 ```sh
@@ -55,6 +57,32 @@ upload their selected narration to it, read
 [references/hosted.md](references/hosted.md). Never add or switch to a remote
 server yourself, including when local setup fails. Follow the connected tool
 schemas: older servers may lack the new tools or options.
+
+## Know what this server can do
+
+Call `bckgrnd_check_setup` once when you're unsure what a connected server
+supports. Besides the health checks it returns `server_version`,
+`project_version`, `readable_project_versions`, `track_count`, `stems`, `tools`
+and `capabilities`. Each capability is true only when a registered tool provides
+it. If `bckgrnd_check_setup` has no `capabilities` field, the server is 0.3.1 or
+older: go by its tool list alone.
+
+`engine_features` lists what the engine contains (stem volumes, sends, scenes,
+pattern lanes, fill styles). That is not a list of arguments. Never pass an
+argument a tool's input schema doesn't have, even if the engine has the feature.
+
+| You can | You can't yet (say so plainly) |
+|---|---|
+| Render any of the twenty tracks, cut stems, loop or evolve them | Set one stem's volume, EQ, filter, echo or reverb |
+| Validate and render a saved project, or mix it under a voice | Edit a project, or write a new `.bckgrnd.json` |
+| Read project versions 1 to 4 | Read a v5 or newer project (refused by name) |
+| Map every beat and bar of a stock track | Map beats of a project whose tempo was changed |
+| Mix under a voice, preview, master, export video | Launch scenes on a schedule, play fills, render a timeline |
+
+When a request needs something in the right column, tell the user it isn't
+supported by this server version and offer the nearest thing in the left one.
+Don't fake it with stem cuts or several renders stitched together unless the
+user agrees to that substitute.
 
 ## Choose music and preview it
 
@@ -165,7 +193,10 @@ When the user wants to cut video, time captions or animate to the music, call
 `bckgrnd_beat_map` with the same `track` and the render's `seconds` (or the
 mix's `total_seconds`). The music starts at 0:00 in every result, so leave
 `offset_seconds` at 0 unless the user places the music later on their own
-timeline. Use its times as given. Don't work beats out from the bpm: the
+timeline. Use its times as given. The map takes a stock `track`, not a `project_path`;
+it matches a saved project only when that project kept its track's tempo, and
+the tools can't confirm that, so don't present it as exact for a project.
+Don't work beats out from the bpm: the
 rendered tempo is a touch slower, and the difference reaches a quarter of a
 second over an hour. Beat 1 of each bar is the downbeat, the natural place for
 a cut. Pass a `.csv` or `.json` `output_path` when an editor or script will

@@ -1,5 +1,28 @@
 # Change Summary
 
+## v0.4.0-rc.2: 11-25-2026 (release candidate, not published)
+
+Everything below "Unreleased" plus Night 6, gathered for 0.4.0. Not on npm; the
+final version number waits on the app's Night 9 merge and a listening pass.
+
+- Engine, library, contracts, shared renderer and fixtures from bckgrnd-msc
+  `c57013d` (Night 9, PR #12). The audio and every vendored file match the
+  `7b2741b` sync; only the commit and build id moved.
+- `bckgrnd_check_setup` reports what the install can do: server, project and
+  snapshot versions, readable project versions (1-4), renderer, app commit and
+  build, track count by section, stems, the registered tools, and capability
+  flags. A flag is only true when a registered tool provides it. Engine features
+  the tools don't expose yet (stem volumes, scenes, fill styles) are listed
+  separately. It now has an output schema. The 0.3.1 fields are unchanged.
+- Every track's four fill styles ship in the library. No tool plays them.
+- A test pins every 0.3.1 tool argument, type, default, enum value and range, so
+  a 0.3.1 call keeps working. Another maps beats at 1 s, 1 min and 1 h on all
+  twenty tracks.
+- The post-deploy hosted check expects five tools and twenty tracks.
+- Docs and the companion skill cover project rendering, beat maps, the
+  capability report, what an agent can't do yet, T3 Code setup and the local and
+  hosted differences.
+
 ## 2026-11-06 — Night 6 local release candidate
 
 Saved-project validation/rendering, project narration, complete atomic bundle sync,

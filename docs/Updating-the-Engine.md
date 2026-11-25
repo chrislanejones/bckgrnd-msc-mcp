@@ -8,12 +8,34 @@ reviewed app build and commit.
 
 ```sh
 cd ../bckgrnd-msc
-pnpm run build:engine
-pnpm run build
-# Source must already be committed before this release build.
+git switch --detach <app-sha>     # a clean, committed checkout
+pnpm install --frozen-lockfile
+pnpm run build:engine             # Rust -> public/wasm
+pnpm run build:static             # PHP library export + public/library/variations
+pnpm run build                    # shared runtime, build manifest, app
 cd ../bckgrnd-msc-mcp
 pnpm run resync ../bckgrnd-msc --expect-commit <app-sha>
 ```
+
+Run `build:static` before `build`. The variation catalog
+(`public/library/variations/`) is gitignored in the app and only `build:static`
+makes it. `build` writes the manifest, so a manifest written before the
+variations exist leaves them out, and the sync then drops
+`vendor/library/variations/` without an error. Nothing in the server reads them,
+but the package has shipped them since Night 6, so a resync that deletes them is
+a packaging change to catch in review. An app worktree works as well as the main
+checkout: pass its path instead of `../bckgrnd-msc`.
+
+### The 0.4.0-rc.2 sync (11-25-2026)
+
+| | Value |
+|---|---|
+| App commit | `c57013d` (head of bckgrnd-msc PR #12, Night 9, not yet merged) |
+| Build id | `9e747ff3…` |
+| Project / snapshot version | 4 / 1 |
+| `vendor/` change from the `7b2741b` sync | only `SOURCE.json` commit and build id; every other file is byte-identical |
+| Track content hashes | unchanged since Night 6 (`59995c1`), so saved projects still match |
+| Parity | **48/48** byte-identical, app vs MCP vs previous bundle |
 
 `resync` runs, stopping at the first failure:
 
