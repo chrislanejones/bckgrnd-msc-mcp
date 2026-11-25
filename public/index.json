@@ -12,6 +12,7 @@
     "bckgrnd_list_tracks",
     "bckgrnd_render_track",
     "bckgrnd_mix_under_voice",
-    "bckgrnd_preview_tracks"
+    "bckgrnd_preview_tracks",
+    "bckgrnd_beat_map"
   ]
 }

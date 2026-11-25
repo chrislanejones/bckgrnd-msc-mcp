@@ -8,3 +8,8 @@ dist/
 vendor/runtime/
 .vercel
 .env*
+
+.vendor-stage-*
+.vendor-previous*
+.agents/
+.playwright-mcp/

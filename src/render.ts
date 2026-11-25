@@ -23,7 +23,7 @@ const YIELD_EVERY_FRAMES = SAMPLE_RATE * 5;
 
 let booted = false;
 
-function boot(): void {
+export function boot(): void {
   if (booted) return;
   const wasm = readFileSync(fileURLToPath(new URL('../vendor/engine/bckgrnd_msc_engine_bg.wasm', import.meta.url)));
   initSync({ module: wasm });

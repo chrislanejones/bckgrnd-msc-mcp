@@ -1,5 +1,46 @@
 # Change Summary
 
+## v0.4.0-rc.2: 11-25-2026 (release candidate, not published)
+
+Everything below "Unreleased" plus Night 6, gathered for 0.4.0. Not on npm; the
+final version number waits on the app's Night 9 merge and a listening pass.
+
+- Engine, library, contracts, shared renderer and fixtures from bckgrnd-msc
+  `c57013d` (Night 9, PR #12). The audio and every vendored file match the
+  `7b2741b` sync; only the commit and build id moved.
+- `bckgrnd_check_setup` reports what the install can do: server, project and
+  snapshot versions, readable project versions (1-4), renderer, app commit and
+  build, track count by section, stems, the registered tools, and capability
+  flags. A flag is only true when a registered tool provides it. Engine features
+  the tools don't expose yet (stem volumes, scenes, fill styles) are listed
+  separately. It now has an output schema. The 0.3.1 fields are unchanged.
+- Every track's four fill styles ship in the library. No tool plays them.
+- A test pins every 0.3.1 tool argument, type, default, enum value and range, so
+  a 0.3.1 call keeps working. Another maps beats at 1 s, 1 min and 1 h on all
+  twenty tracks.
+- The post-deploy hosted check expects five tools and twenty tracks.
+- Docs and the companion skill cover project rendering, beat maps, the
+  capability report, what an agent can't do yet, T3 Code setup and the local and
+  hosted differences.
+
+## 2026-11-06 — Night 6 local release candidate
+
+Saved-project validation/rendering, project narration, complete atomic bundle sync,
+packed contracts/fixtures and preset migration with original backups. The ten-tool
+package passes clean-install tests. Actual T3 discovery and installed-app listening
+remain separate open gates; see [Night 6 evidence](Night6-Release.md).
+
+## Unreleased
+
+- Project format v4 from bckgrnd-msc `5e2e809` (Night 8): each scene states `crash`. v1–v3 files open as before (migrated in memory, never rewritten), v5 and newer are refused by name. Validation adds `stored_schema_version`. Renders never launch a scene, so a crash accent doesn't play in MCP renders.
+- The supported versions come from the vendored contracts instead of being written into the sync script.
+- `pnpm run resync <app> --expect-commit <sha>` syncs, re-stamps fixtures and runs every gate, including the new `verify-parity` check (all twenty tracks, byte-identical to the app's engine).
+
+- Two hip-hop tracks in a new Hip-hop section: Cipher (100 bpm boom bap) and Boulevard (105 bpm West Coast), synced from bckgrnd-msc `59995c1`. `bckgrnd_list_tracks` lists twenty tracks and takes `section: 'Hip-hop'`.
+- New `bckgrnd_beat_map` tool, local and hosted: the exact time of every beat and bar of a track, with bar and beat numbers, for cutting video or timing animation to the music.
+- Times are read from the engine rather than worked out from the bpm. The engine starts each sixteenth on a whole sample, so the nominal bpm drifts from the audio by up to about 0.3 s over an hour. The map matches the rendered WAV to the sample.
+- Optional `offset_seconds`, and CSV or JSON output for editors and scripts. Lists over 1,000 beats are saved to a file.
+
 ## v0.3.1: 10-31-2026
 
 Distribution: npm (`bckgrnd-msc-mcp@0.3.1`), GitHub release archive and hosted deployment.

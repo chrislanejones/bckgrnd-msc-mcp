@@ -29,16 +29,16 @@ try {
   await client.connect(new StreamableHTTPClientTransport(new URL(endpoint)));
   if (client.getServerVersion()?.version !== version) throw new Error(`Expected ${version}, got ${client.getServerVersion()?.version}`);
   const { tools } = await client.listTools();
-  if (tools.length !== 4 || JSON.stringify(tools).includes('output_path')) throw new Error('Unexpected hosted schemas');
+  if (tools.length !== 5 || JSON.stringify(tools).includes('output_path')) throw new Error('Unexpected hosted schemas');
   const tracks = await call('bckgrnd_list_tracks', {});
-  if (tracks.structuredContent.tracks.length !== 18) throw new Error('Track library incomplete');
+  if (tracks.structuredContent.tracks.length !== 20) throw new Error('Track library incomplete');
   await call('bckgrnd_render_track', { track: 'rain', seconds: 2, arrangement: 'evolving' });
   const upload = { voice_format: 'wav', voice_base64: readFileSync(new URL('../test/fixtures/speech.wav', import.meta.url)).toString('base64') };
   const mixed = await call('bckgrnd_mix_under_voice', { ...upload, track: 'rain', ducking: 'subtle', final_lufs: -18, true_peak_dbfs: -2 });
   if (!mixed.structuredContent.mastering_target_met) throw new Error(`Hosted mastering missed target: ${JSON.stringify(mixed.structuredContent)}`);
   const preview = await call('bckgrnd_preview_tracks', { ...upload, content: 'tutorial', seconds: 15, ducking: 'subtle' });
   if (preview.content.filter((c) => c.type === 'audio').length !== 2) throw new Error('Missing comparison audio');
-  console.log(JSON.stringify({ endpoint, version, tools: tools.length, tracks: 18, decoded_audio_files: counter, mixed_lufs: mixed.structuredContent.output_lufs, mixed_true_peak: mixed.structuredContent.output_true_peak_dbfs, previews: preview.structuredContent.previews.map((p) => p.track) }, null, 2));
+  console.log(JSON.stringify({ endpoint, version, tools: tools.length, tracks: 20, decoded_audio_files: counter, mixed_lufs: mixed.structuredContent.output_lufs, mixed_true_peak: mixed.structuredContent.output_true_peak_dbfs, previews: preview.structuredContent.previews.map((p) => p.track) }, null, 2));
 } finally {
   await client.close();
   rmSync(dir, { recursive: true, force: true });

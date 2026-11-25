@@ -20,7 +20,7 @@ The service is free, and the source is MIT licensed.
 - Hosted narration must be base64-encoded audio, with `voice_format` set to mp3,
   wav, ogg or flac; decoded input is limited to 2 MiB. Total output duration,
   including intro and tail, is limited to 120 seconds. Results embed MP3 audio.
-- Local setup requires Node.js 20+, pnpm, and ffmpeg for mixing and previews.
+- Local setup requires Node.js 22+, pnpm, and ffmpeg for mixing and previews.
   Build from the public repository with `pnpm install` and `pnpm run build`,
   then run `node dist/index.js`. The local package command is `pnpm dlx bckgrnd-msc-mcp@0.3.1`.
 - `BCKGRND_MSC_API_TOKEN` (optional, self-hosted deployments): require bearer

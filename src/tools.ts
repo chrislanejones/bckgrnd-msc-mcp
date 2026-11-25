@@ -46,12 +46,12 @@ export function registerTools(server: McpServer): void {
 Every track is a 16-bar loop with eight stems: ${STEMS.join(', ')}. Energy runs 1 (barely there) to 5 (wants attention). Under dense speech, stay at energy 1-2; the Lofi tracks are energy 1.
 
 Args:
-  - section ('EDM' | 'Lofi' | 'Breaks', optional): only list one section
+  - section ('EDM' | 'Hip-hop' | 'Lofi' | 'Breaks', optional): only list one section
   - max_energy (1-5, optional): only list tracks at or below this energy
 
 Returns: { tracks: [{ id, name, section, style, bpm, kind, mood, energy, good_for }], stems: string[] }`,
       inputSchema: {
-        section: z.enum(['EDM', 'Lofi', 'Breaks']).optional().describe('Only list tracks from this section'),
+        section: z.enum(['EDM', 'Hip-hop', 'Lofi', 'Breaks']).optional().describe('Only list tracks from this section'),
         max_energy: z.number().int().min(1).max(5).optional().describe('Only list tracks at or below this energy'),
       },
       outputSchema: {
@@ -157,6 +157,7 @@ Levels are measured, not guessed: both files are measured in LUFS, the voice is 
 
 Supports saved preset settings, ducking strength (subtle/normal/strong), evolving arrangements, and optional final_lufs/true_peak_dbfs mastering. Explicit arguments override saved settings.\n\nGive exactly one of:
   - track (string): a bckgrnd-msc track id or name. It's rendered to the right length automatically. Pick one with bckgrnd_list_tracks to suit the content.
+  - project_path (string): an absolute saved-project path. Preserves its accepted patterns and mix. Do not combine with cut or evolving arrangement.
   - music_path (string): an absolute path to your own music file. It loops if it's shorter than the voice.
 
 Args:
@@ -194,6 +195,7 @@ Returns: { path, voice_seconds, total_seconds, music, music_db, loudness_lufs, v
         final_lufs: z.number().optional(),
         true_peak_dbfs: z.number().optional(),
         mastering_target_met: z.boolean().optional(),
+        project: z.record(z.string(), z.unknown()).optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },

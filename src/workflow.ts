@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { findTrack, unknownTrackMessage } from './library.js';
 import { durationSeconds, levelsFor, loudnessLufs, mixUnderVoice, SILENCE_LUFS } from './mix.js';
 import { outputProblem } from './paths.js';
+import { loadProject, renderSavedProject } from './projects.js';
 import { renderTrack } from './render.js';
 import { mixInputShape, withDefaults } from './settings.js';
 import { resolveSettings } from './presets.js';
@@ -16,7 +17,9 @@ export type MixInput = z.input<typeof mixInputSchema>;
 export async function mixNarration(input: MixInput, job: JobOptions = {}) {
   const parsed = mixInputSchema.parse(input);
   const args = { ...parsed, ...withDefaults(resolveSettings(parsed)) };
-  if (Boolean(args.track) === Boolean(args.music_path)) throw new Error('Give exactly one of track or music_path, directly or in a preset.');
+  if ([args.track, args.music_path, args.project_path].filter(Boolean).length !== 1) throw new Error('Give exactly one of track, project_path or music_path, directly or in a preset.');
+  if (args.project_path && (args.cut?.length || args.arrangement !== 'loop')) throw new Error('A saved project owns its musical settings. Remove cut/evolving from the arguments or preset. Voice-processing settings may still be used.');
+  const project = args.project_path ? await loadProject(args.project_path) : undefined;
   if (!isAbsolute(args.voice_path) || (args.music_path && !isAbsolute(args.music_path))) throw new Error('Input paths must be absolute.');
   if (!existsSync(args.voice_path)) throw new Error(`voice_path not found: ${args.voice_path}`);
   if (args.music_path && !existsSync(args.music_path)) throw new Error(`music_path not found: ${args.music_path}`);
@@ -24,7 +27,7 @@ export async function mixNarration(input: MixInput, job: JobOptions = {}) {
   if (args.music_path && args.arrangement === 'evolving') throw new Error('Evolving arrangements require a synthesized track, not music_path.');
   const track = args.track ? findTrack(args.track) : undefined;
   if (args.track && !track) throw new Error(unknownTrackMessage(args.track));
-  const musicName = track ? track.id : basename(args.music_path!, extname(args.music_path!));
+  const musicName = project ? `project-r${project.snapshot.revision}` : track ? track.id : basename(args.music_path!, extname(args.music_path!));
   const outputPath = args.output_path ?? join(dirname(args.voice_path), `${basename(args.voice_path, extname(args.voice_path))}.with-${musicName}.mp3`);
   const problem = outputProblem(outputPath, ['.mp3', '.wav'], args.overwrite);
   if (problem) throw new Error(problem);
@@ -34,7 +37,11 @@ export async function mixNarration(input: MixInput, job: JobOptions = {}) {
     const totalSeconds = args.lead_in_seconds + voiceSeconds + args.tail_seconds;
     if (totalSeconds > 3600) throw new Error('The limit including lead-in and tail is 3600 seconds.');
     let musicPath = args.music_path!;
-    if (track) {
+    if (project) {
+      if (totalSeconds > 600) throw new Error('Project narration renders are limited to ten minutes.');
+      scratch = mkdtempSync(join(tmpdir(), 'bckgrnd-project-mix-')); musicPath = join(scratch, 'project.wav');
+      await renderSavedProject(project, { seconds: totalSeconds, startSeconds: 0, fadeInSeconds: 0, fadeOutSeconds: 0, tailSeconds: 0, sampleRate: 48000 }, musicPath, false, { ...job, onProgress: async (p, message) => job.onProgress?.(p * 0.6, message) });
+    } else if (track) {
       scratch = mkdtempSync(join(tmpdir(), 'bckgrnd-mix-'));
       musicPath = join(scratch, `${track.id}.wav`);
       await renderTrack({ ...job, onProgress: async (p, message) => job.onProgress?.(p * 0.6, message), track, seconds: totalSeconds, outputPath: musicPath, cut: args.cut, arrangement: args.arrangement, fadeInSeconds: 1, fadeOutSeconds: 0 });
@@ -51,7 +58,8 @@ export async function mixNarration(input: MixInput, job: JobOptions = {}) {
     await job.onProgress?.(100, 'Mix complete');
     return {
       ...measured, path: outputPath, voice_seconds: Math.round(voiceSeconds * 10) / 10, total_seconds: Math.round(totalSeconds * 10) / 10,
-      music: track ? track.name : args.music_path!, music_db: args.music_db, loudness_lufs: args.loudness_lufs,
+      music: project ? project.snapshot.project.name : track ? track.name : args.music_path!,
+      ...(project ? { project: project.identity } : {}), music_db: args.music_db, loudness_lufs: args.loudness_lufs,
       voice_lufs: voiceLufs, music_lufs: musicLufs, voice_gain_db: levels.voiceGainDb, music_gain_db: levels.musicGainDb,
       duck: args.duck, ducking: args.ducking, arrangement: args.arrangement, cut: args.cut ?? [],
       lead_in_seconds: args.lead_in_seconds, tail_seconds: args.tail_seconds,

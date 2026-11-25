@@ -53,24 +53,27 @@ const hasFfmpeg = (() => {
 })();
 
 describe('the tool list', () => {
-  it('offers the seven tools', async () => {
+  it('offers the ten tools', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      'bckgrnd_beat_map',
       'bckgrnd_check_setup',
       'bckgrnd_list_tracks',
       'bckgrnd_mix_under_voice',
       'bckgrnd_mix_video',
       'bckgrnd_presets',
       'bckgrnd_preview_tracks',
+      'bckgrnd_render_project',
       'bckgrnd_render_track',
+      'bckgrnd_validate_project',
     ]);
   });
 });
 
 describe('bckgrnd_list_tracks', () => {
-  it('lists all eighteen tracks and the eight stems', async () => {
+  it('lists all twenty tracks and the eight stems', async () => {
     const { data } = await call('bckgrnd_list_tracks', {});
-    expect((data.tracks as unknown[]).length).toBe(18);
+    expect((data.tracks as unknown[]).length).toBe(20);
     expect(data.stems).toEqual(['kick', 'clap', 'hats', 'bass', 'stab', 'lead', 'pad', 'arp']);
   });
 
@@ -78,6 +81,13 @@ describe('bckgrnd_list_tracks', () => {
     const { data } = await call('bckgrnd_list_tracks', {});
     const tracks = data.tracks as Array<{ mood: string; energy: number; good_for: string[] }>;
     expect(tracks.every((t) => t.mood !== 'unrated' && t.good_for.length > 0)).toBe(true);
+  });
+
+  it('lists the two hip-hop tracks in their own section', async () => {
+    const { data } = await call('bckgrnd_list_tracks', { section: 'Hip-hop' });
+    const tracks = data.tracks as Array<{ id: string; bpm: number; section: string; mood: string }>;
+    expect(tracks.map((t) => t.id).sort()).toEqual(['boulevard', 'cipher']);
+    expect(tracks.every((t) => t.section === 'Hip-hop' && t.bpm >= 100 && t.mood !== 'unrated')).toBe(true);
   });
 
   it('filters by energy', async () => {
@@ -132,6 +142,13 @@ describe('bckgrnd_render_track', () => {
     const { isError, text } = await call('bckgrnd_render_track', { track: 'rain', seconds: 1, output_path: 'out.wav' });
     expect(isError).toBe(true);
     expect(text).toContain('absolute');
+  });
+
+  it('says plainly when the output folder does not exist', async () => {
+    const { isError, text } = await call('bckgrnd_render_track', { track: 'rain', seconds: 1, output_path: '/tmp/bckgrnd-no-such-folder-xyz/out.wav' });
+    expect(isError).toBe(true);
+    expect(text).toContain("doesn't exist");
+    expect(text).not.toContain('ENOENT');
   });
 
   it('will not replace a file unless told to', async () => {
@@ -227,5 +244,23 @@ describe.skipIf(!hasFfmpeg)('bckgrnd_mix_under_voice', () => {
     const { isError, text } = await call('bckgrnd_mix_under_voice', { voice_path: voice });
     expect(isError).toBe(true);
     expect(text).toContain('exactly one');
+  });
+});
+
+describe('bckgrnd_validate_project', () => {
+  it('names the versions it reads and reports a migrated v3 file as stored v3, read v4', async () => {
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === 'bckgrnd_validate_project')?.description).toContain('versions 1-4');
+    const project = new URL('./fixtures/project-v3.bckgrnd.json', import.meta.url).pathname;
+    const { isError, data } = await call('bckgrnd_validate_project', { project_path: decodeURIComponent(project) });
+    expect(isError).toBe(false);
+    expect(data).toMatchObject({ valid: true, schema_version: 4, stored_schema_version: 3, warnings: [] });
+  });
+
+  it('refuses a v5 project by name', async () => {
+    const project = decodeURIComponent(new URL('./fixtures/project-v5.bckgrnd.json', import.meta.url).pathname);
+    const { isError, text } = await call('bckgrnd_validate_project', { project_path: project });
+    expect(isError).toBe(true);
+    expect(text).toContain('Project version 5 is newer than this app understands (4)');
   });
 });
