@@ -79,3 +79,6 @@ ships them so the bundle matches the app, but no tool plays a fill yet:
 `bckgrnd_check_setup` lists them under `engine_features.fill_styles` and reports
 `capabilities.fill_style_rendering: false`. They sit beside `track` in each file,
 so a track's content hash, and every saved project that names it, is unchanged.
+Since the Night 11 sync, each file also carries four one-beat fills under
+`beatFillStyles`, which the app plays when its Fill length is Beat. They are
+listed under `engine_features.beat_fill_styles`. No tool plays them either.

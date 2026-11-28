@@ -7,7 +7,7 @@
  * when that tool or argument exists. Agents can read this instead of guessing.
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { RENDERER_VERSION } from '../vendor/shared/runtime.js';
@@ -61,7 +61,7 @@ async function advertisedTools(): Promise<Tool[]> {
 
 type Stamp = { commit: string; buildId: string; dirty: boolean };
 type LibraryIndex = { tracks: Array<{ id: string; section: string }> };
-type FillStyle = { id: string };
+type FillStyle = { id: string; style?: string };
 
 export async function compatibility() {
   const { VERSION } = await import('./server.js');
@@ -83,6 +83,17 @@ export async function compatibility() {
     if (styles.length) tracksWithFillStyles++;
     styles.forEach((style, i) => fillStyles.add(i === 0 ? 'classic' : style.id));
   }
+  // One-beat fills (app Night 11) travel beside the track as `beatFillStyles`, one per style.
+  const beatFillStyles = new Set<string>();
+  let tracksWithBeatFillStyles = 0;
+  for (const track of library.tracks) {
+    const styles = json<{ beatFillStyles?: FillStyle[] }>(`library/${track.id}.json`).beatFillStyles ?? [];
+    if (styles.length) tracksWithBeatFillStyles++;
+    for (const style of styles) beatFillStyles.add(style.style ?? style.id);
+  }
+  // A performance take is its own document, never part of a project; older bundles have no contract for it.
+  const performance = new URL('contracts/performance.json', vendor);
+  const performanceVersion = existsSync(performance) ? json<{ properties: { version: { const: number } } }>('contracts/performance.json').properties.version.const : null;
 
   const tools = await advertisedTools();
   const capabilities = capabilitiesOf(tools);
@@ -110,6 +121,9 @@ export async function compatibility() {
       pattern_lanes: patterns.lanes.map((l) => l.id),
       fill_styles: [...fillStyles],
       tracks_with_fill_styles: tracksWithFillStyles,
+      beat_fill_styles: [...beatFillStyles],
+      tracks_with_beat_fill_styles: tracksWithBeatFillStyles,
+      performance_take_version: performanceVersion,
     },
   };
 }

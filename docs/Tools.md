@@ -174,8 +174,10 @@ without anyone editing a list.
 
 `engine_features` lists what the engine and contracts contain: the 17 mix and
 effect `parameters`, the per-stem `stem_parameters` (volume, send, muted, solo),
-the four `scene_slots`, the nine `pattern_lanes` and the four `fill_styles`
-(classic, simple, busy, syncopated). **Listed there does not mean a tool accepts
+the four `scene_slots`, the nine `pattern_lanes`, the four `fill_styles`
+(classic, simple, busy, syncopated), the four one-beat `beat_fill_styles` and
+`performance_take_version`, the version of the app's standalone take file (2).
+A take is never part of a project, and no tool reads one yet. **Listed there does not mean a tool accepts
 it.** Only `capabilities` and each tool's input schema say that. A failed bundle
 read leaves these fields out and fails the `capabilities` check with the reason.
 

@@ -76,6 +76,7 @@ const setupOutput = {
   engine_features: z.object({
     parameters: z.array(z.string()), stem_parameters: z.array(z.string()), scene_slots: z.array(z.string()),
     pattern_lanes: z.array(z.string()), fill_styles: z.array(z.string()), tracks_with_fill_styles: z.number().int(),
+    beat_fill_styles: z.array(z.string()), tracks_with_beat_fill_styles: z.number().int(), performance_take_version: z.number().int().nullable(),
   }).optional(),
 };
 
@@ -86,7 +87,7 @@ export function registerDoctor(server: McpServer): void {
 
 Also reports what this install can do, read from its vendored contracts, library and registered tools: server_version, project_version and readable_project_versions, snapshot_version, renderer, app_commit, build_id, track_count, sections, stems, tools and capabilities.
 
-capabilities: { project_rendering, project_editing, beat_mapping, timeline_rendering, individual_stem_volume, scheduled_scene_launches, fill_style_rendering }. A flag is true only when a registered tool provides it. engine_features lists what the engine and contracts contain (parameters, stem_parameters, scene_slots, pattern_lanes, fill_styles); being listed there does not mean any tool accepts it. Before passing an argument, check that the tool's input schema has it.`,
+capabilities: { project_rendering, project_editing, beat_mapping, timeline_rendering, individual_stem_volume, scheduled_scene_launches, fill_style_rendering }. A flag is true only when a registered tool provides it. engine_features lists what the engine and contracts contain (parameters, stem_parameters, scene_slots, pattern_lanes, fill_styles, beat_fill_styles, performance_take_version); being listed there does not mean any tool accepts it. Before passing an argument, check that the tool's input schema has it.`,
     inputSchema: {}, outputSchema: setupOutput, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, async (_args, extra) => {
     const result = await checkSetup(toolJob(extra));

@@ -78,6 +78,9 @@ describe('bckgrnd_check_setup capabilities', () => {
       pattern_lanes: ['kick', 'clap', 'hat', 'hatOpen', 'bass', 'stab', 'lead', 'pad', 'arp'],
       fill_styles: ['classic', 'simple', 'busy', 'syncopated'],
       tracks_with_fill_styles: 20,
+      beat_fill_styles: ['classic', 'simple', 'busy', 'syncopated'],
+      tracks_with_beat_fill_styles: 20,
+      performance_take_version: 2,
     });
     expect(setup.engine_features.parameters).toContain('fx.reverbMix');
   });
