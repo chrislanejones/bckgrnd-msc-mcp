@@ -21,6 +21,9 @@ export const MOODS: Record<string, Mood> = {
   Acid: { mood: 'intense, squelchy', energy: 4, good_for: ['hype reels', 'launch trailers'] },
   Garage: { mood: 'bouncy, swung', energy: 3, good_for: ['pop culture', 'sports', 'light commentary'] },
   Breakbeat: { mood: 'energetic, rave', energy: 4, good_for: ['gaming', 'trailers', 'montages'] },
+  // Hip-hop (11-16-2026): guesses from the tempo and voicing, like the rest; tune by ear.
+  'Boom Bap': { mood: 'head-nodding, gritty', energy: 2, good_for: ['podcasts', 'interviews', 'commentary', 'storytelling'] },
+  'West Coast': { mood: 'laid-back bounce', energy: 3, good_for: ['vlogs', 'product demos', 'travel', 'light commentary'] },
   'Liquid DnB': { mood: 'fast but smooth', energy: 3, good_for: ['recaps', 'fast-paced explainers', 'workouts'] },
 };
 

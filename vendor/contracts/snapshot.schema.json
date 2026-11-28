@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bckgrnd-msc.netlify.app/contracts/snapshot.schema.json",
+  "title": "bckgrnd-msc immutable saved revision",
+  "$comment": "Writers always write a complete project at the current version (4). The envelope stays version 1: the musical version lives in project.version. Readers also accept a snapshot whose project is version 3 (every snapshot written before Night 8) and migrate it on read, holding it to the same canonical check after the v3 to v4 step. They never rewrite the stored copy until the user saves.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "id", "revision", "savedAt", "renderer", "source", "project"],
+  "properties": {
+    "format": { "const": "bckgrnd-msc/snapshot" },
+    "version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,100}$" },
+    "revision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "savedAt": { "type": "string", "format": "date-time" },
+    "renderer": { "const": "project-renderer-1" },
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["trackId", "sha256"],
+      "properties": { "trackId": { "type": "string" }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+    },
+    "project": { "$ref": "project.schema.json" }
+  }
+}

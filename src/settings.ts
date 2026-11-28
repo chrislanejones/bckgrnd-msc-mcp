@@ -23,6 +23,7 @@ export const mixInputShape = {
   ...mixSettingsShape,
   preset: presetNameSchema.optional().describe('Saved local preset; explicitly supplied settings override it.'),
   music_path: z.string().min(1).optional(),
+  project_path: z.string().min(1).optional().describe('Absolute path to a validated saved project; mutually exclusive with track and music_path.'),
   output_path: z.string().optional(),
   overwrite: z.boolean().default(false),
 };

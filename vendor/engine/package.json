@@ -1,0 +1,17 @@
+{
+  "name": "bckgrnd-msc-engine",
+  "type": "module",
+  "description": "Real-time DSP engine for the bckgrnd-msc stem machine: sample-accurate sequencer, subtractive voices, per-stem ducking, tempo-synced delay.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "bckgrnd_msc_engine_bg.wasm",
+    "bckgrnd_msc_engine.js",
+    "bckgrnd_msc_engine.d.ts"
+  ],
+  "main": "bckgrnd_msc_engine.js",
+  "types": "bckgrnd_msc_engine.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

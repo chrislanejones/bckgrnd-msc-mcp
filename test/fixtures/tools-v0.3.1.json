@@ -1,0 +1,530 @@
+{
+  "version": "0.3.1",
+  "tools": [
+    {
+      "name": "bckgrnd_list_tracks",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "description": "Only list tracks from this section",
+            "type": "string",
+            "enum": [
+              "EDM",
+              "Lofi",
+              "Breaks"
+            ]
+          },
+          "max_energy": {
+            "description": "Only list tracks at or below this energy",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "bckgrnd_render_track",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Track id or name, e.g. \"rain\""
+          },
+          "seconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3600,
+            "description": "Length of the WAV in seconds"
+          },
+          "arrangement": {
+            "default": "loop",
+            "type": "string",
+            "enum": [
+              "loop",
+              "evolving"
+            ]
+          },
+          "cut": {
+            "description": "Stems to silence for the whole take",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "kick",
+                "clap",
+                "hats",
+                "bass",
+                "stab",
+                "lead",
+                "pad",
+                "arp"
+              ]
+            }
+          },
+          "fade_in_seconds": {
+            "default": 1,
+            "description": "Fade-in length",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "fade_out_seconds": {
+            "default": 4,
+            "description": "Fade-out length",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 60
+          },
+          "output_path": {
+            "description": "Absolute path ending in .wav",
+            "type": "string"
+          },
+          "overwrite": {
+            "default": false,
+            "description": "Replace output_path if it already exists",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "track",
+          "seconds"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "bckgrnd_mix_under_voice",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "music_db": {
+            "type": "number",
+            "minimum": -40,
+            "maximum": 0
+          },
+          "loudness_lufs": {
+            "type": "number",
+            "minimum": -30,
+            "maximum": -9
+          },
+          "duck": {
+            "type": "boolean"
+          },
+          "ducking": {
+            "description": "Ducking strength; normal preserves the original compressor. duck:false disables it.",
+            "type": "string",
+            "enum": [
+              "subtle",
+              "normal",
+              "strong"
+            ]
+          },
+          "cut": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "kick",
+                "clap",
+                "hats",
+                "bass",
+                "stab",
+                "lead",
+                "pad",
+                "arp"
+              ]
+            }
+          },
+          "lead_in_seconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "tail_seconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "arrangement": {
+            "description": "loop keeps the original arrangement; evolving gently changes stem levels every 16 bars.",
+            "type": "string",
+            "enum": [
+              "loop",
+              "evolving"
+            ]
+          },
+          "final_lufs": {
+            "description": "Optional loudness target for the finished mix, distinct from the voice target.",
+            "type": "number",
+            "minimum": -30,
+            "maximum": -9
+          },
+          "true_peak_dbfs": {
+            "description": "Peak ceiling when final_lufs is set; default -1.5 dBTP.",
+            "type": "number",
+            "minimum": -9,
+            "maximum": -0.5
+          },
+          "preset": {
+            "description": "Saved local preset; explicitly supplied settings override it.",
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+          },
+          "music_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "output_path": {
+            "type": "string"
+          },
+          "overwrite": {
+            "default": false,
+            "type": "boolean"
+          },
+          "voice_path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "voice_path"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "bckgrnd_preview_tracks",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "music_db": {
+            "type": "number",
+            "minimum": -40,
+            "maximum": 0
+          },
+          "loudness_lufs": {
+            "type": "number",
+            "minimum": -30,
+            "maximum": -9
+          },
+          "duck": {
+            "type": "boolean"
+          },
+          "ducking": {
+            "description": "Ducking strength; normal preserves the original compressor. duck:false disables it.",
+            "type": "string",
+            "enum": [
+              "subtle",
+              "normal",
+              "strong"
+            ]
+          },
+          "cut": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "kick",
+                "clap",
+                "hats",
+                "bass",
+                "stab",
+                "lead",
+                "pad",
+                "arp"
+              ]
+            }
+          },
+          "arrangement": {
+            "description": "loop keeps the original arrangement; evolving gently changes stem levels every 16 bars.",
+            "type": "string",
+            "enum": [
+              "loop",
+              "evolving"
+            ]
+          },
+          "final_lufs": {
+            "description": "Optional loudness target for the finished mix, distinct from the voice target.",
+            "type": "number",
+            "minimum": -30,
+            "maximum": -9
+          },
+          "true_peak_dbfs": {
+            "description": "Peak ceiling when final_lufs is set; default -1.5 dBTP.",
+            "type": "number",
+            "minimum": -9,
+            "maximum": -0.5
+          },
+          "preset": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+          },
+          "voice_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tracks": {
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "content": {
+            "default": "narration",
+            "type": "string",
+            "enum": [
+              "narration",
+              "tutorial",
+              "story",
+              "tech",
+              "news",
+              "hype"
+            ]
+          },
+          "seconds": {
+            "default": 20,
+            "type": "number",
+            "minimum": 15,
+            "maximum": 30
+          },
+          "start_seconds": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "voice_path"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "bckgrnd_mix_video",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "music_db": {
+            "type": "number",
+            "minimum": -40,
+            "maximum": 0
+          },
+          "loudness_lufs": {
+            "type": "number",
+            "minimum": -30,
+            "maximum": -9
+          },
+          "duck": {
+            "type": "boolean"
+          },
+          "ducking": {
+            "description": "Ducking strength; normal preserves the original compressor. duck:false disables it.",
+            "type": "string",
+            "enum": [
+              "subtle",
+              "normal",
+              "strong"
+            ]
+          },
+          "cut": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "kick",
+                "clap",
+                "hats",
+                "bass",
+                "stab",
+                "lead",
+                "pad",
+                "arp"
+              ]
+            }
+          },
+          "arrangement": {
+            "description": "loop keeps the original arrangement; evolving gently changes stem levels every 16 bars.",
+            "type": "string",
+            "enum": [
+              "loop",
+              "evolving"
+            ]
+          },
+          "final_lufs": {
+            "description": "Optional loudness target for the finished mix, distinct from the voice target.",
+            "type": "number",
+            "minimum": -30,
+            "maximum": -9
+          },
+          "true_peak_dbfs": {
+            "description": "Peak ceiling when final_lufs is set; default -1.5 dBTP.",
+            "type": "number",
+            "minimum": -9,
+            "maximum": -0.5
+          },
+          "preset": {
+            "description": "Saved local preset; explicitly supplied settings override it.",
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+          },
+          "music_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "output_path": {
+            "type": "string"
+          },
+          "overwrite": {
+            "default": false,
+            "type": "boolean"
+          },
+          "video_path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "video_path"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "bckgrnd_presets",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "get",
+              "save",
+              "delete"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+          },
+          "settings": {
+            "type": "object",
+            "properties": {
+              "track": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "music_db": {
+                "type": "number",
+                "minimum": -40,
+                "maximum": 0
+              },
+              "loudness_lufs": {
+                "type": "number",
+                "minimum": -30,
+                "maximum": -9
+              },
+              "duck": {
+                "type": "boolean"
+              },
+              "ducking": {
+                "description": "Ducking strength; normal preserves the original compressor. duck:false disables it.",
+                "type": "string",
+                "enum": [
+                  "subtle",
+                  "normal",
+                  "strong"
+                ]
+              },
+              "cut": {
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "kick",
+                    "clap",
+                    "hats",
+                    "bass",
+                    "stab",
+                    "lead",
+                    "pad",
+                    "arp"
+                  ]
+                }
+              },
+              "lead_in_seconds": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              },
+              "tail_seconds": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              },
+              "arrangement": {
+                "description": "loop keeps the original arrangement; evolving gently changes stem levels every 16 bars.",
+                "type": "string",
+                "enum": [
+                  "loop",
+                  "evolving"
+                ]
+              },
+              "final_lufs": {
+                "description": "Optional loudness target for the finished mix, distinct from the voice target.",
+                "type": "number",
+                "minimum": -30,
+                "maximum": -9
+              },
+              "true_peak_dbfs": {
+                "description": "Peak ceiling when final_lufs is set; default -1.5 dBTP.",
+                "type": "number",
+                "minimum": -9,
+                "maximum": -0.5
+              }
+            },
+            "additionalProperties": false
+          },
+          "overwrite": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "bckgrnd_check_setup",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  ]
+}

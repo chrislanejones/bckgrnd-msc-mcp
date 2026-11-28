@@ -2,20 +2,31 @@
 name: background-music
 description: Add background music to narration, podcasts, screen recordings or videos using the bckgrnd-msc MCP server. Compare short previews, reuse favorite settings, keep speech clear, and export audio or synchronized video. Use when someone asks to put music under a voice, add a beat to a recording, or improve a narrated MP3 or video.
 metadata:
-  version: "0.3.1"
+  version: "0.4.0-rc.2"
 ---
 
 # Background music under a voice
 
 Use the bckgrnd-msc MCP server to choose music, compare it under actual speech,
-and export a mix. The server synthesizes eighteen tracks with eight stems;
+and export a mix. The server synthesizes twenty tracks with eight stems;
 ffmpeg measures levels and lowers music while the voice talks. Respect the
 listener's requested track, level and workflow over the suggestions below.
 
 ## Connect and check
 
 Installing the skill adds instructions; connect the MCP separately. Local
-processing is the default: Node 20+, pnpm, ffmpeg and ffprobe are needed.
+processing is the default. Node 22+ runs the companion; ffmpeg and ffprobe are
+required for narration/video mixing, not standalone project WAV rendering.
+
+Project tools, beat maps and the capability report are in the `0.4.0-rc.2`
+candidate, not the published `0.3.1` package below. Use the tested local
+installation's absolute Node and `dist/index.js` paths from `bckgrnd_check_setup`
+or `--check`; do not claim an unpublished version can be installed from a
+registry. In T3 Code, add that stdio command with `claude mcp add` or
+`codex mcp add` for the thread's provider, start a new thread or reconnect the
+provider, then make a real tool call. A CLI health check alone is not a client
+connection test. Change only this companion's configuration, and only when the
+user asks you to set it up.
 
 Claude Code:
 ```sh
@@ -47,7 +58,48 @@ upload their selected narration to it, read
 server yourself, including when local setup fails. Follow the connected tool
 schemas: older servers may lack the new tools or options.
 
+## Know what this server can do
+
+Call `bckgrnd_check_setup` once when you're unsure what a connected server
+supports. Besides the health checks it returns `server_version`,
+`project_version`, `readable_project_versions`, `track_count`, `stems`, `tools`
+and `capabilities`. Each capability is true only when a registered tool provides
+it. If `bckgrnd_check_setup` has no `capabilities` field, the server is 0.3.1 or
+older: go by its tool list alone.
+
+`engine_features` lists what the engine contains (stem volumes, sends, scenes,
+pattern lanes, fill styles). That is not a list of arguments. Never pass an
+argument a tool's input schema doesn't have, even if the engine has the feature.
+
+| You can | You can't yet (say so plainly) |
+|---|---|
+| Render any of the twenty tracks, cut stems, loop or evolve them | Set one stem's volume, EQ, filter, echo or reverb |
+| Validate and render a saved project, or mix it under a voice | Edit a project, or write a new `.bckgrnd.json` |
+| Read project versions 1 to 4 | Read a v5 or newer project (refused by name) |
+| Map every beat and bar of a stock track | Map beats of a project whose tempo was changed |
+| Mix under a voice, preview, master, export video | Launch scenes on a schedule, play fills, render a timeline |
+
+When a request needs something in the right column, tell the user it isn't
+supported by this server version and offer the nearest thing in the left one.
+Don't fake it with stem cuts or several renders stitched together unless the
+user agrees to that substitute.
+
 ## Choose music and preview it
+
+For a saved `.bckgrnd.json` project, first call `bckgrnd_validate_project` with
+its absolute `project_path`. Preserve the selected revision and source hash.
+Use `bckgrnd_render_project` for standalone WAV, with explicit duration, start,
+fades and tail. Use `bckgrnd_mix_under_voice` with `project_path` for narration.
+Do not replace an edited project with its factory track. Accepted patterns,
+explicitly cleared lanes, mix and sustained effects belong to the project;
+stored scenes are alternatives, not a playback sequence. Held gestures, fills,
+unaccepted previews and session-only A/B are excluded.
+
+Project rendering supports up to ten minutes plus a thirty-second effect tail,
+44.1 or 48 kHz stereo PCM WAV. Unknown versions, missing dependencies and bad
+patterns must be reported before output. Return the revision, build identity,
+file location, duration and measurements supplied by the tool. Do not silently
+migrate a user's source file or apply stock-track cuts/evolving arrangements.
 
 1. Read available narration text or the user's description; do not pretend to
    know the recording's contents when you have not heard or transcribed it.
@@ -74,6 +126,7 @@ schemas: older servers may lack the new tools or options.
 | Tech, science and analysis | drive, glass | lead |
 | News, updates and demos | warehouse, basement, tunnel | lead, arp |
 | Sports and light commentary | southside, pirate | lead |
+| Podcasts, interviews and vlogs | cipher, boulevard | lead |
 | Fast recaps | lowtide, slipstream | lead, hats |
 | Trailers and gaming | bricks, ravetape, acid | none |
 
@@ -111,8 +164,10 @@ promise of platform certification.
 
 ## Export audio or video
 
-For audio, call `bckgrnd_mix_under_voice`. Give a `voice_path` and either `track`
-or the user's `music_path`. The server renders music to the required length;
+For audio, call `bckgrnd_mix_under_voice`. Give a `voice_path` and exactly one of
+`track`, the user's `music_path`, or a validated `project_path`. Project sources
+reject explicit `cut` and `arrangement: "evolving"`; voice loudness, ducking,
+mastering and encoding remain separate settings. The server renders music to the required length;
 do not render a separate bed first. Default audio output is
 `<voice>.with-<track>.mp3`; choose an absolute `.mp3` or `.wav` `output_path`.
 Audio defaults to a two-second lead-in and a three-second tail.
@@ -132,6 +187,21 @@ part of the user's request. Input files cannot be overwritten.
 
 Use `bckgrnd_render_track` only when the user wants standalone music.
 
+## Cut to the beat
+
+When the user wants to cut video, time captions or animate to the music, call
+`bckgrnd_beat_map` with the same `track` and the render's `seconds` (or the
+mix's `total_seconds`). The music starts at 0:00 in every result, so leave
+`offset_seconds` at 0 unless the user places the music later on their own
+timeline. Use its times as given. The map takes a stock `track`, not a `project_path`;
+it matches a saved project only when that project kept its track's tempo, and
+the tools can't confirm that, so don't present it as exact for a project.
+Don't work beats out from the bpm: the
+rendered tempo is a touch slower, and the difference reaches a quarter of a
+second over an hour. Beat 1 of each bar is the downbeat, the natural place for
+a cut. Pass a `.csv` or `.json` `output_path` when an editor or script will
+read the list.
+
 ## Favorite settings
 
 When asked to remember a preferred mix, use local `bckgrnd_presets`:
@@ -145,6 +215,13 @@ When asked to remember a preferred mix, use local `bckgrnd_presets`:
 Presets are local files. They do not store narration or output paths and are
 not available on the public hosted server. Do not save preferences implicitly
 just because a listener accepted one mix.
+
+To migrate an existing preset's musical subset, use `action: "migrate"`. It
+backs up the original and writes a project sidecar while retaining all voice
+processing settings in the original preset. An evolving stock arrangement is
+reported as unconverted; it is not invented as a scene sequence. Combine the
+returned `project_path` with the original `preset` for narration: inherited
+stock track/cut/arrangement settings are excluded, voice settings remain.
 
 ## Adjust and deliver
 

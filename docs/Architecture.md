@@ -29,6 +29,49 @@ wasm-pack's `--target web`, and its `initSync()` accepts the raw bytes of the
 `.wasm` file. The browser hands those over from a `fetch`, and Node hands them over
 from `readFileSync`.
 
+## Saved projects use the app's own renderer
+
+Stock tracks and saved projects take different paths through the server.
+
+```text
+bckgrnd_render_track ──▶ src/render.ts ──▶ engine (.wasm), track JSON from vendor/library
+bckgrnd_render_project ─▶ src/projects.ts ─▶ worker ─▶ vendor/shared/runtime.js ──▶ engine (.wasm)
+```
+
+A saved project is more than a track id: edited notes, lanes cleared on purpose,
+a mix, sustained effects and a revision. Rewriting the code that turns all that
+into engine calls would give two versions that drift apart. So the server doesn't.
+bckgrnd-msc compiles its own project code (`frontend/lib/`) into one file,
+`public/shared/runtime.js`, and the sync copies it to `vendor/shared/` next to the
+engine it was built with. The app's export worker and this server call the same
+`readSnapshot` and `renderProject`.
+
+| Step | Who does it |
+|---|---|
+| Read the file, migrate v1-v3 in memory, refuse v5+ | `readSnapshot` in the shared runtime |
+| Check the track's content hash against the library | the shared runtime |
+| Check every vendored file against `SOURCE.json` | `verifyProjectBundle` in `src/projects.ts` |
+| Render in a fresh worker, so a fresh WASM instance and noise stream | `src/project-worker.ts` |
+| Write to a temporary file, publish only when complete | `atomicOutput` in `src/paths.ts` |
+
+The fresh worker matters for parity: the engine's noise generator starts from
+the same seed on every run, the way it does in the browser's export worker.
+`pnpm run verify-parity` renders every track and four project fixtures both ways
+and needs every WAV byte-identical.
+
+Renders play the project's base mix. They never launch a stored scene, so a
+scene's crash accent can't fire, and fills aren't played. The fill styles are in
+the library so the bundle matches the app, and `bckgrnd_check_setup` lists them
+under `engine_features`, not `capabilities`.
+
+## What the server can do, read from what it ships
+
+`src/capabilities.ts` builds the `bckgrnd_check_setup` report. Versions come from
+the contracts, the build from `SOURCE.json`, tracks and fill styles from the
+library. The capability flags come from a fresh in-memory server's own tool list:
+each flag names the tool or argument that would provide it. Nobody keeps a list of
+what's supported by hand, so it can't go stale.
+
 ## Streaming to disk
 
 An hour of 48 kHz stereo is 691 MB as 16-bit samples and twice that as floats.

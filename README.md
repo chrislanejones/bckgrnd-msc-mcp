@@ -7,14 +7,28 @@ name, and it renders the music to the right length, sets it under the voice by
 **measured loudness**, dips it while the voice talks, and hands back one file.
 
 The music comes from [bckgrnd-msc](https://github.com/chrislanejones/bckgrnd-msc), a
-stem machine with eighteen tracks and eight stems each, synthesized by a **Rust**
+stem machine with twenty tracks and eight stems each, synthesized by a **Rust**
 engine. This server runs that same engine, compiled to **WebAssembly**, in Node. No
 samples, no streaming service, no licensing questions. The music is made on your
 machine when you ask for it.
 
+## 0.4.0 release candidate
+
+`0.4.0-rc.2` renders projects saved in the bckgrnd-msc app, not just its stock
+tracks. `bckgrnd_validate_project` checks a saved `.bckgrnd.json` file and
+`bckgrnd_render_project` renders it with the same code the app uses, so the WAV
+matches the app's export byte for byte. A project can also go under a narration.
+It reads project versions 1 to 4 and refuses anything newer. `bckgrnd_beat_map`
+gives the exact time of every beat. `bckgrnd_check_setup` now says what the
+install can do, so an agent doesn't have to guess.
+
+**It isn't on npm yet**; the commands below still install 0.3.1.
+[Install the candidate](docs/Getting-Started.md#the-040-release-candidate) from
+its packed archive.
+
 ## Quick start
 
-Needs Node 20 or newer. Mixing under a voice also needs ffmpeg
+Needs Node 22 or newer. Mixing under a voice also needs ffmpeg
 (`brew install ffmpeg`, `sudo apt install ffmpeg` or `winget install Gyan.FFmpeg`).
 
 Use the local server by default, pinned to version 0.3.1:
@@ -52,14 +66,16 @@ Ask your agent:
 - "Save these as my podcast settings; use subtle ducking and an evolving arrangement."
 - "Add music to this screen recording and keep the video synchronized."
 - "Master the finished export to -18 LUFS with a -2 dBTP ceiling."
+- "Give me the beat times for 90 seconds of Slipstream so I can cut the video to it."
 
-Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.1 --check`.
+Local setup check: `pnpm dlx bckgrnd-msc-mcp@0.3.1 --check`. On the candidate it
+also reports versions, the build and which features the tools support.
 Codex setup: `codex mcp add bckgrnd-msc -- pnpm dlx bckgrnd-msc-mcp@0.3.1`.
 
 [Workflow examples](docs/Workflows.md) cover previews, presets, video exports
-and mastering. All seven tools run locally. Hosted processing adds previews,
-ducking controls, arrangements and mastering for short uploaded audio; saved
-presets, video and setup diagnostics stay local.
+and mastering. All ten candidate tools run locally; 0.3.1 has seven. The hosted
+server has five (list, render, mix, preview, beat map) for short uploaded audio;
+saved projects, presets, video and setup diagnostics stay local.
 
 ## Documentation
 
@@ -68,10 +84,10 @@ presets, video and setup diagnostics stay local.
 - **[Tools](docs/Tools.md)**: the local and hosted tools, every argument, what comes back, and what the errors mean.
 - **[Workflows](docs/Workflows.md)**: compare music, save favorites, export video and master final loudness.
 - **[Levels](docs/Levels.md)**: how the music level is set by measured loudness, the ducking, and which numbers to pick for which content.
-- **[Tracks](docs/Tracks.md)**: the eighteen tracks and eight stems, their moods and energy, and matching music to content.
-- **[Architecture](docs/Architecture.md)**: one engine in two places, streaming to disk, and the ffmpeg mix step by step.
+- **[Tracks](docs/Tracks.md)**: the twenty tracks and eight stems, their moods and energy, and matching music to content.
+- **[Architecture](docs/Architecture.md)**: one engine in two places, the shared project renderer, streaming to disk, and the ffmpeg mix step by step.
 - **[File Map](docs/File-Map.md)**: where everything lives.
-- **[Updating the Engine](docs/Updating-the-Engine.md)**: copying a new engine or new tracks in from bckgrnd-msc.
+- **[Updating the Engine](docs/Updating-the-Engine.md)**: `pnpm run resync`, which copies a new engine, tracks and renderer in from bckgrnd-msc and runs every gate.
 - **[Development](docs/Development.md)**: the gates, what the tests check, and releasing.
 - **[Change Summary](docs/Change-summary.md)**: the full dated release history.
 - **[The skill](skills/background-music/SKILL.md)**: what the agent reads.
@@ -82,26 +98,29 @@ decided, what was turned down, and what would make it the wrong call later.
 | ADR | Decision |
 |---|---|
 | [001](docs/adr/001-typescript-server-over-vendored-wasm.md) | A TypeScript server runs bckgrnd-msc's own `.wasm` build, and ffmpeg does the mix |
+| [002](docs/adr/002-check-setup-reports-derived-capabilities.md) | `bckgrnd_check_setup` reports capabilities worked out from the registered tools, never a hand-kept list (draft) |
 
 ## Tools
 
 | Tool | What it does |
 |---|---|
-| `bckgrnd_list_tracks` | The eighteen tracks, with bpm, mood, energy (1 to 5) and what each one suits |
+| `bckgrnd_list_tracks` | The twenty tracks, with bpm, mood, energy (1 to 5) and what each one suits |
+| `bckgrnd_validate_project` | Validate snapshot/schema/source/build compatibility without changing the file |
+| `bckgrnd_render_project` | Render an immutable saved revision to PCM WAV with explicit range, fades and tail |
 | `bckgrnd_render_track` | One track to a 48 kHz stereo WAV of any length, up to an hour. Cut any stems, set the fades |
 | `bckgrnd_preview_tracks` | Automatically select an audible excerpt and compare up to three tracks locally or hosted |
 | `bckgrnd_mix_under_voice` | Narration plus music to MP3/WAV, with optional presets, ducking strength, evolving arrangements and final mastering |
 | `bckgrnd_mix_video` | Synchronized MP4 export, copying the original picture (local) |
-| `bckgrnd_presets` | Save, list, retrieve and delete favorite mix settings (local) |
-| `bckgrnd_check_setup` | Check dependencies, output access and the actual music engine (local) |
+| `bckgrnd_presets` | Save, list, retrieve, delete or migrate favorite mix settings with an original backup (local) |
+| `bckgrnd_check_setup` | Check dependencies, output access and the actual music engine, and report versions and supported features (local) |
+| `bckgrnd_beat_map` | The exact time of every beat and bar, read from the engine, for cutting video to the music. Inline, or saved as CSV or JSON |
 
-Rendering runs about **20x faster** than real time. Seven minutes of music takes
-about eighteen seconds.
+Project outputs report measured render time, revision, build identity, duration, format, peak and RMS. Performance depends on the host and composition.
 
 ## Tech Stack
 
 - **Rust → WebAssembly**: the bckgrnd-msc engine, built with `wasm-pack`, copied into `vendor/`
-- **TypeScript** on **Node 20+**: the server
+- **TypeScript** on **Node 22+**: the server
 - **MCP TypeScript SDK**: the protocol, over stdio
 - **Zod**: tool argument checking
 - **ffmpeg**: loudness measuring (`ebur128`), ducking (`sidechaincompress`) and MP3 encoding
@@ -110,6 +129,16 @@ about eighteen seconds.
 ## Changelog
 
 Latest release below. Full dated history → **[docs/Change-summary.md](docs/Change-summary.md)**.
+
+### v0.4.0-rc.2: 11-25-2026 (candidate, not published)
+
+Saved projects from the bckgrnd-msc app: validate them, render them to WAV and
+mix them under a narration. Project versions 1 to 4 read the way the app reads
+them, and the app's own renderer runs here, so stock tracks and saved projects
+come out byte-identical to the app at 44.1 and 48 kHz. Beat maps, two hip-hop
+tracks (twenty in all) and a setup check that reports versions, the build and
+which features are supported. Every v0.3.1 call still works the same. Engine,
+library and renderer from bckgrnd-msc `c57013d`.
 
 ### v0.3.1: 10-31-2026
 
@@ -145,3 +174,6 @@ come out at the same level. The `background-music` skill matches tracks to conte
 ## License
 
 MIT
+
+Release evidence: [Night 6 record](docs/Night6-Release.md) and the
+[0.4.0 release candidate record](docs/Release-0.4.0.md).

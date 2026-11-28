@@ -1,16 +1,32 @@
 # Tools
 
-Seven local tools. The hosted server exposes list, render, mix and preview with upload/audio schemas; see [Vercel hosting](Vercel.md). All paths are absolute. The server is started from a folder nobody
+Ten local tools. The hosted server exposes five of them (list, render, mix, preview
+and beat map) with upload/audio schemas instead of paths; see [Vercel hosting](Vercel.md).
+
+| Tool | Local | Hosted | Since |
+|---|---|---|---|
+| `bckgrnd_list_tracks` | yes | yes | 0.1.0 |
+| `bckgrnd_render_track` | yes | yes (120 s, MP3) | 0.1.0 |
+| `bckgrnd_mix_under_voice` | yes | yes (uploaded voice) | 0.1.0 |
+| `bckgrnd_preview_tracks` | yes | yes | 0.2.0 |
+| `bckgrnd_mix_video` | yes | no | 0.3.0 |
+| `bckgrnd_presets` | yes | no | 0.3.0 |
+| `bckgrnd_check_setup` | yes | no | 0.3.0 |
+| `bckgrnd_beat_map` | yes | yes | 0.4.0 |
+| `bckgrnd_validate_project` | yes | no | 0.4.0 |
+| `bckgrnd_render_project` | yes | no | 0.4.0 |
+
+All paths are absolute. The server is started from a folder nobody
 picked, so a relative path would land somewhere surprising, and it refuses them
 instead. No tool replaces an existing file unless you pass `overwrite: true`.
 
 ## `bckgrnd_list_tracks`
 
-The eighteen tracks with tempo, mood, energy and what each one suits. Read-only.
+The twenty tracks with tempo, mood, energy and what each one suits. Read-only.
 
 | Argument | Type | Default | What it does |
 |---|---|---|---|
-| `section` | `EDM`, `Lofi` or `Breaks` | all | Only list one section |
+| `section` | `EDM`, `Hip-hop`, `Lofi` or `Breaks` | all | Only list one section |
 | `max_energy` | 1 to 5 | all | Only list tracks at or below this energy |
 
 Returns `{ tracks: [{ id, name, section, style, bpm, kind, mood, energy, good_for }], stems }`.
@@ -124,6 +140,81 @@ connections }` with specific diagnostic messages and installation commands.
 The CLI exposes the same check as `--check` or `doctor`, returning exit 0 when
 all checks pass and 1 otherwise. It never modifies client configuration.
 
+Since 0.4.0 it also says what this install can do, so an agent can look before
+it passes an argument. Nothing in it is typed in by hand: versions come from
+`vendor/contracts/`, the build from `vendor/SOURCE.json`, the tracks and fill
+styles from `vendor/library/`, and the capability flags from the tools the
+server actually registers.
+
+| Field | Where it comes from | 0.4.0 value |
+|---|---|---|
+| `server_version` | `package.json` | `0.4.0-rc.2` |
+| `project_version` | `contracts/project.schema.json` | 4 |
+| `readable_project_versions` | v1 up to `project_version` | `[1, 2, 3, 4]` |
+| `snapshot_version` | `contracts/snapshot.schema.json` | 1 |
+| `renderer` | the shared runtime | `project-renderer-1` |
+| `app_commit`, `build_id`, `bundle_dirty` | `SOURCE.json` | `c57013d…`, `9e747ff3…`, false |
+| `track_count`, `sections` | `library/index.json` | 20; EDM 6, Hip-hop 2, Lofi 6, Breaks 6 |
+| `stem_count`, `stems` | `contracts/parameters.json` | 8 |
+| `tools` | the registered tools | the ten above |
+
+`capabilities` is a flag per feature. A flag is true only when a registered tool
+or argument provides it, so a future release that adds the argument turns it on
+without anyone editing a list.
+
+| Capability | 0.4.0 | Turns on when the server has |
+|---|---|---|
+| `project_rendering` | **true** | `bckgrnd_render_project` |
+| `beat_mapping` | **true** | `bckgrnd_beat_map` |
+| `project_editing` | false | `bckgrnd_edit_project` |
+| `timeline_rendering` | false | `bckgrnd_render_timeline` or a `timeline` argument |
+| `individual_stem_volume` | false | a `stem_volumes` argument |
+| `scheduled_scene_launches` | false | a `scene_launches` argument |
+| `fill_style_rendering` | false | a `fill_style` argument |
+
+`engine_features` lists what the engine and contracts contain: the 17 mix and
+effect `parameters`, the per-stem `stem_parameters` (volume, send, muted, solo),
+the four `scene_slots`, the nine `pattern_lanes`, the four `fill_styles`
+(classic, simple, busy, syncopated), the four one-beat `beat_fill_styles` and
+`performance_take_version`, the version of the app's standalone take file (2).
+A take is never part of a project, and no tool reads one yet. **Listed there does not mean a tool accepts
+it.** Only `capabilities` and each tool's input schema say that. A failed bundle
+read leaves these fields out and fails the `capabilities` check with the reason.
+
+## `bckgrnd_beat_map`
+
+The exact time of every beat and bar in a track, for cutting video, timing
+captions or placing animation on the beat. Nothing is rendered, so it answers
+right away.
+
+The times come from the engine, not from the bpm. The engine starts every
+sixteenth on a whole sample, so a bar runs a few samples longer than the bpm
+says: Rain's bar is 137,152 samples, not 137,142.86. That's nothing in one bar
+and about a quarter of a second after an hour, which is a missed cut. The map
+matches the WAV to the sample at any length.
+
+The music starts at 0:00 in `bckgrnd_render_track` files and in both mix
+results; the lead-in only delays the voice. So pass the render's `seconds` or
+the mix's `total_seconds` and leave `offset_seconds` at 0.
+
+| Argument | Type | Default | What it does |
+|---|---|---|---|
+| `track` | string | required | Track id or name |
+| `seconds` | 1 to 3600 | required | Length of the music |
+| `offset_seconds` | 0 to 3600 | `0` | Added to every time, for music placed later on your timeline |
+| `output_path` | string | none | Save every beat; must end in `.csv` (`time,bar,beat`) or `.json` (local) |
+| `overwrite` | boolean | `false` | Replace `output_path` if it exists (local) |
+
+Returns `{ track, bpm, measured_bpm, sample_rate, beats_per_bar, beat_seconds,
+bar_seconds, beat_samples, bar_samples, seconds, offset_seconds, beat_count,
+bar_count, beats: [{ time, bar, beat }], path? }`. Bars and beats count from 1;
+beat 1 is the downbeat. Times have six decimals, finer than one sample.
+
+Up to 1,000 beats come back inline. A longer list is saved as CSV in
+`BCKGRND_MSC_OUT_DIR` and only its `path` comes back. The hosted tool has no
+files, so past 1,000 beats it returns the grid alone: beat n starts at
+`offset_seconds + n * beat_samples / sample_rate`, exactly.
+
 ## Progress and cancellation
 
 Local calls support MCP progress notifications when the caller supplies a
@@ -144,3 +235,44 @@ Errors come back as tool errors with the fix in the message.
 | `"ffmpeg" isn't installed` | No ffmpeg on `PATH` | The message has the install line |
 | `Give exactly one of track or music_path` | Both or neither | Pick one |
 | `... is silent` | The voice file has no sound | Check the file |
+
+## Saved projects (local)
+
+`bckgrnd_validate_project({project_path})` validates an absolute snapshot file,
+source library hash, schema versions and the complete bundled renderer. It returns
+identity/revision, renderer/build/app commit, resolved-event/source/content hashes,
+name and warnings. It never changes the file.
+
+`bckgrnd_render_project` accepts `project_path`, required `seconds` (0–600),
+`start_seconds` (0–600), `fade_in_seconds` (default 0), `fade_out_seconds` (0.02),
+`tail_seconds` (0–30), `sample_rate` (44100 or 48000, default 48000), optional
+`output_path` and `overwrite` (false). Fades must fit within the musical range.
+Output is atomic PCM16 stereo WAV; cancellation publishes no partial file. Results
+include path, revision/build identity, frames, duration, peak/RMS and render time.
+Malformed patterns, unknown formats/versions and missing dependencies fail first.
+
+Project versions come from the vendored contract (`contracts/project.schema.json`),
+currently 4. Versions 1–3 are read exactly as the app reads them: migrated in memory,
+never rewritten on disk. A v3 snapshot's scenes each gain `crash: false`. Version 5
+and newer are refused by name ("newer than this app understands"). Validation reports
+`schema_version` (as read, 4) and `stored_schema_version` (as written in the file).
+A v3 file and its v4 reading render the same bytes.
+
+A v4 scene's `crash` (crash on launch) is read and checked but never heard here:
+renders play the project's base mix and never launch a stored scene, so no crash
+accent can fire.
+
+Accepted notes/mix/effects render exactly as saved. An explicitly empty lane stays
+empty. Scenes are alternatives, not an automatic sequence. Transient performance
+and unaccepted auditions are excluded. Kick tuning stays on the source root.
+
+`bckgrnd_mix_under_voice` accepts exactly one source: `track`, `music_path` or
+`project_path`. Project sources reject explicit cuts and evolving arrangements.
+A named preset can supply voice loudness/ducking/mastering; inherited stock track,
+cuts and arrangement are excluded for a project source. Music and voice processing
+remain independent. Output reports the project identity alongside mix measurements.
+
+`bckgrnd_presets` action `migrate` requires `name`, backs up the original as
+`.original`, and creates a musical project sidecar. The preset's voice settings
+remain untouched. Evolving arrangement settings are retained in the original and
+reported as unconverted. Existing stock-track calls keep their prior behavior.
