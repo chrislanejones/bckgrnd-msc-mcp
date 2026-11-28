@@ -93,7 +93,7 @@ export class Engine {
     event_count(): number;
     /**
      * Begin a temporary override (`docs/NIGHT3_PROTOCOL.md`, Gestures): kind 1 Echo
-     * Throw, 2 Filter Hold. False (nothing changed) for an unknown kind, a token
+     * Throw, 2 Filter Hold, 3 Beat Repeat (`docs/NIGHT10_PROTOCOL.md`). False (nothing changed) for an unknown kind, a token
      * already held, or when four are already held. The override expires after 3 s
      * of rendered audio unless [`Engine::gesture_renew`] is called (event 21).
      */
@@ -125,6 +125,12 @@ export class Engine {
     static new(sample_rate: number): Engine;
     constructor(sample_rate: number);
     nudge(dir: number): void;
+    /**
+     * The onset serial now: onsets fired since the engine was made, the fifth column of
+     * every event ([`scene::EVENT_WIDTH`]). Never reset, not by Stop or a track load.
+     * For the worklet, to stamp the refusals it raises itself; an f64, exact to 2^53.
+     */
+    onset_serial(): number;
     /**
      * Panic: cancel the pending scene and fill (`panic`), cut short an active fill,
      * release every gesture and the latched throw, stop playback and clear the
@@ -196,8 +202,19 @@ export class Engine {
      *
      * `accent` 1 plays a crash on the onset it lands (`accent fired`, 53), with or
      * without a landing scene; 0 none; anything else is refused as invalid, part 3.
+     *
+     * The fill plays the whole last bar; [`Engine::queue_build_with_length`] takes a
+     * fill length too.
      */
     queue_build_with(request_id: number, bars: number, target: Float32Array, land: Float32Array, fill_id: number, fill_index: number, accent: number): number;
+    /**
+     * [`Engine::queue_build_with`] with the fill's length (Night 10,
+     * [`scheduler::fill_length`]): 0 the build's whole last bar, 1 only that bar's last
+     * beat, steps 12 to 15, with the bar's first three beats rising as without a
+     * fill. The landing commits on the same downbeat either way. Any other length is
+     * refused as invalid, part 5 (the fill). Ignored without a fill (`fill_id` 0).
+     */
+    queue_build_with_length(request_id: number, bars: number, target: Float32Array, land: Float32Array, fill_id: number, fill_index: number, accent: number, fill_length: number): number;
     /**
      * Queue fill `index` of the loaded track for the next bar line
      * (`docs/NIGHT3_PROTOCOL.md`, Fills). Returns 0 when accepted, otherwise the
@@ -218,15 +235,21 @@ export class Engine {
      *
      * `phrase_bars` is 0 (the next bar, as [`Engine::queue_fill`]) or 2, 4, 8 or 16:
      * the fill plays the bar that ends on the next phrase line of that length, or on
-     * the loop's wrap. `length` is 0, one bar; nothing else yet. Refused with 1 for any
-     * other `phrase_bars` or `length`, or no such fill; 7 while stopped; 3 during a
-     * scratch, brake or backspin; 8 while a fill is queued or playing.
+     * the loop's wrap. `length` is 0, one bar, or 1, one beat (Night 10,
+     * [`scheduler::fill_length`]): only that bar's last beat, steps 12 to 15, plays
+     * the fill, from positions 12 to 15 of its recipe, and beats 1 to 3 play the
+     * groove. A beat fill is due on the first such last beat ahead, so a press before
+     * this bar's has started still catches it. Refused with 1 for any other
+     * `phrase_bars` or `length`, or no such fill; 7 while stopped; 3 during a scratch,
+     * brake or backspin; 8 while a fill is queued or playing.
      */
     queue_fill_at(request_id: number, index: number, phrase_bars: number, length: number): number;
     /**
      * Fill into (`docs/NIGHT8_PROTOCOL.md`): fill `index` as [`Engine::queue_fill_at`]
      * with `phrase_bars` and `length`, and the scene `values` (a 44-value vector)
      * committed on the onset the fill ends, before that step's notes, as one request.
+     * A beat fill ends on the same downbeat as a bar fill of its bar, so the scene
+     * lands there either way.
      * Returns 0 when accepted, otherwise the reason.
      *
      * Lanes staged just before with [`Engine::queue_patterns`] and `link` = `scene_id`
@@ -298,6 +321,15 @@ export class Engine {
      * is: Release FX. Echo repeats already in the line ring out on the base feedback.
      */
     release_gestures(): void;
+    /**
+     * Beat Repeat's division.
+     */
+    repeat_division(): number;
+    /**
+     * Whether Beat Repeat is looping its slice now (held, past the grid line and the
+     * first pass). Not whether one is held: that is the gesture.
+     */
+    repeat_looping(): boolean;
     /**
      * Samples until the next downbeat `bars` from now, at least `min_ahead` away.
      *
@@ -396,6 +428,13 @@ export class Engine {
     set_output_gain(gain: number): void;
     set_output_gain_wasm(gain: number): void;
     /**
+     * Beat Repeat's division as a note value: 4, 8 (the default) or 16. A live
+     * setting, not part of the mix, a scene or a project. False (nothing changed) for
+     * any other value. While a repeat is engaged, the new division captures again on
+     * its next grid line.
+     */
+    set_repeat_division(division: number): boolean;
+    /**
      * The room's decay, 0.2 to 2.5 s (default 0.32 s).
      */
     set_reverb_decay(seconds: number): void;
@@ -433,8 +472,9 @@ export class Engine {
     set_width(width: number): void;
     stop(): void;
     /**
-     * Move waiting events into `out`, four numbers each (`[kind, request id, a, b]`),
-     * oldest first. Returns how many were moved; any that did not fit stay queued.
+     * Move waiting events into `out`, five numbers each (`[kind, request id, a, b,
+     * serial]`, [`scene::EVENT_WIDTH`]), oldest first. Returns how many were moved; any
+     * that did not fit stay queued.
      */
     take_events_into(out: Float64Array): number;
     visual_step(): number;
@@ -470,6 +510,7 @@ export interface InitOutput {
     readonly engine_new: (a: number) => number;
     readonly engine_new_wasm: (a: number) => number;
     readonly engine_nudge: (a: number, b: number) => void;
+    readonly engine_onset_serial: (a: number) => number;
     readonly engine_panic: (a: number) => void;
     readonly engine_pending_build: (a: number) => number;
     readonly engine_pending_fill: (a: number) => number;
@@ -479,6 +520,7 @@ export interface InitOutput {
     readonly engine_process: (a: number, b: number, c: number, d: any, e: number, f: number, g: any) => void;
     readonly engine_queue_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly engine_queue_build_with: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => number;
+    readonly engine_queue_build_with_length: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => number;
     readonly engine_queue_fill: (a: number, b: number, c: number) => number;
     readonly engine_queue_fill_at: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly engine_queue_fill_into: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
@@ -486,6 +528,8 @@ export interface InitOutput {
     readonly engine_queue_scene: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly engine_queue_scene_with: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly engine_release_gestures: (a: number) => void;
+    readonly engine_repeat_division: (a: number) => number;
+    readonly engine_repeat_looping: (a: number) => number;
     readonly engine_samples_to_next_downbeat: (a: number, b: number, c: number) => number;
     readonly engine_scope_json: (a: number) => [number, number];
     readonly engine_scratch_end: (a: number, b: number) => void;
@@ -505,6 +549,7 @@ export interface InitOutput {
     readonly engine_set_muted_index: (a: number, b: number, c: number) => void;
     readonly engine_set_output_gain: (a: number, b: number) => void;
     readonly engine_set_output_gain_wasm: (a: number, b: number) => void;
+    readonly engine_set_repeat_division: (a: number, b: number) => number;
     readonly engine_set_reverb_decay: (a: number, b: number) => void;
     readonly engine_set_reverb_mix: (a: number, b: number) => void;
     readonly engine_set_scene: (a: number, b: number, c: number) => number;

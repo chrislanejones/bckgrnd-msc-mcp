@@ -164,7 +164,7 @@ export class Engine {
     }
     /**
      * Begin a temporary override (`docs/NIGHT3_PROTOCOL.md`, Gestures): kind 1 Echo
-     * Throw, 2 Filter Hold. False (nothing changed) for an unknown kind, a token
+     * Throw, 2 Filter Hold, 3 Beat Repeat (`docs/NIGHT10_PROTOCOL.md`). False (nothing changed) for an unknown kind, a token
      * already held, or when four are already held. The override expires after 3 s
      * of rendered audio unless [`Engine::gesture_renew`] is called (event 21).
      * @param {number} token
@@ -268,6 +268,16 @@ export class Engine {
      */
     nudge(dir) {
         wasm.engine_nudge(this.__wbg_ptr, dir);
+    }
+    /**
+     * The onset serial now: onsets fired since the engine was made, the fifth column of
+     * every event ([`scene::EVENT_WIDTH`]). Never reset, not by Stop or a track load.
+     * For the worklet, to stamp the refusals it raises itself; an f64, exact to 2^53.
+     * @returns {number}
+     */
+    onset_serial() {
+        const ret = wasm.engine_onset_serial(this.__wbg_ptr);
+        return ret;
     }
     /**
      * Panic: cancel the pending scene and fill (`panic`), cut short an active fill,
@@ -380,6 +390,9 @@ export class Engine {
      *
      * `accent` 1 plays a crash on the onset it lands (`accent fired`, 53), with or
      * without a landing scene; 0 none; anything else is refused as invalid, part 3.
+     *
+     * The fill plays the whole last bar; [`Engine::queue_build_with_length`] takes a
+     * fill length too.
      * @param {number} request_id
      * @param {number} bars
      * @param {Float32Array} target
@@ -395,6 +408,30 @@ export class Engine {
         const ptr1 = passArrayF32ToWasm0(land, wasm.__wbindgen_malloc);
         const len1 = WASM_VECTOR_LEN;
         const ret = wasm.engine_queue_build_with(this.__wbg_ptr, request_id, bars, ptr0, len0, ptr1, len1, fill_id, fill_index, accent);
+        return ret;
+    }
+    /**
+     * [`Engine::queue_build_with`] with the fill's length (Night 10,
+     * [`scheduler::fill_length`]): 0 the build's whole last bar, 1 only that bar's last
+     * beat, steps 12 to 15, with the bar's first three beats rising as without a
+     * fill. The landing commits on the same downbeat either way. Any other length is
+     * refused as invalid, part 5 (the fill). Ignored without a fill (`fill_id` 0).
+     * @param {number} request_id
+     * @param {number} bars
+     * @param {Float32Array} target
+     * @param {Float32Array} land
+     * @param {number} fill_id
+     * @param {number} fill_index
+     * @param {number} accent
+     * @param {number} fill_length
+     * @returns {number}
+     */
+    queue_build_with_length(request_id, bars, target, land, fill_id, fill_index, accent, fill_length) {
+        const ptr0 = passArrayF32ToWasm0(target, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArrayF32ToWasm0(land, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_queue_build_with_length(this.__wbg_ptr, request_id, bars, ptr0, len0, ptr1, len1, fill_id, fill_index, accent, fill_length);
         return ret;
     }
     /**
@@ -423,9 +460,13 @@ export class Engine {
      *
      * `phrase_bars` is 0 (the next bar, as [`Engine::queue_fill`]) or 2, 4, 8 or 16:
      * the fill plays the bar that ends on the next phrase line of that length, or on
-     * the loop's wrap. `length` is 0, one bar; nothing else yet. Refused with 1 for any
-     * other `phrase_bars` or `length`, or no such fill; 7 while stopped; 3 during a
-     * scratch, brake or backspin; 8 while a fill is queued or playing.
+     * the loop's wrap. `length` is 0, one bar, or 1, one beat (Night 10,
+     * [`scheduler::fill_length`]): only that bar's last beat, steps 12 to 15, plays
+     * the fill, from positions 12 to 15 of its recipe, and beats 1 to 3 play the
+     * groove. A beat fill is due on the first such last beat ahead, so a press before
+     * this bar's has started still catches it. Refused with 1 for any other
+     * `phrase_bars` or `length`, or no such fill; 7 while stopped; 3 during a scratch,
+     * brake or backspin; 8 while a fill is queued or playing.
      * @param {number} request_id
      * @param {number} index
      * @param {number} phrase_bars
@@ -440,6 +481,8 @@ export class Engine {
      * Fill into (`docs/NIGHT8_PROTOCOL.md`): fill `index` as [`Engine::queue_fill_at`]
      * with `phrase_bars` and `length`, and the scene `values` (a 44-value vector)
      * committed on the onset the fill ends, before that step's notes, as one request.
+     * A beat fill ends on the same downbeat as a bar fill of its bar, so the scene
+     * lands there either way.
      * Returns 0 when accepted, otherwise the reason.
      *
      * Lanes staged just before with [`Engine::queue_patterns`] and `link` = `scene_id`
@@ -556,6 +599,23 @@ export class Engine {
      */
     release_gestures() {
         wasm.engine_release_gestures(this.__wbg_ptr);
+    }
+    /**
+     * Beat Repeat's division.
+     * @returns {number}
+     */
+    repeat_division() {
+        const ret = wasm.engine_repeat_division(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * Whether Beat Repeat is looping its slice now (held, past the grid line and the
+     * first pass). Not whether one is held: that is the gesture.
+     * @returns {boolean}
+     */
+    repeat_looping() {
+        const ret = wasm.engine_repeat_looping(this.__wbg_ptr);
+        return ret !== 0;
     }
     /**
      * Samples until the next downbeat `bars` from now, at least `min_ahead` away.
@@ -735,6 +795,18 @@ export class Engine {
         wasm.engine_set_output_gain_wasm(this.__wbg_ptr, gain);
     }
     /**
+     * Beat Repeat's division as a note value: 4, 8 (the default) or 16. A live
+     * setting, not part of the mix, a scene or a project. False (nothing changed) for
+     * any other value. While a repeat is engaged, the new division captures again on
+     * its next grid line.
+     * @param {number} division
+     * @returns {boolean}
+     */
+    set_repeat_division(division) {
+        const ret = wasm.engine_set_repeat_division(this.__wbg_ptr, division);
+        return ret !== 0;
+    }
+    /**
      * The room's decay, 0.2 to 2.5 s (default 0.32 s).
      * @param {number} seconds
      */
@@ -819,8 +891,9 @@ export class Engine {
         wasm.engine_stop(this.__wbg_ptr);
     }
     /**
-     * Move waiting events into `out`, four numbers each (`[kind, request id, a, b]`),
-     * oldest first. Returns how many were moved; any that did not fit stay queued.
+     * Move waiting events into `out`, five numbers each (`[kind, request id, a, b,
+     * serial]`, [`scene::EVENT_WIDTH`]), oldest first. Returns how many were moved; any
+     * that did not fit stay queued.
      * @param {Float64Array} out
      * @returns {number}
      */
